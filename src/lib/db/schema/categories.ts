@@ -1,3 +1,4 @@
+// src/lib/db/schema/categories.ts
 import { pgTable, text, uuid, foreignKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';

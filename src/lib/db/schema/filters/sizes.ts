@@ -1,3 +1,4 @@
+// src/lib/db/schema/filters/sizes.ts
 import { pgTable, text, integer, uuid } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { relations } from 'drizzle-orm';

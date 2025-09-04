@@ -1,3 +1,4 @@
+// src/lib/db/schema/filters/genders.ts
 import { pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { relations } from 'drizzle-orm';

@@ -1,3 +1,4 @@
+// src/lib/db/schema/reviews.ts
 import { pgTable, text, timestamp, uuid, integer } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { z } from 'zod';

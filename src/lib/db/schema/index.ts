@@ -1,3 +1,4 @@
+// src/lib/db/schema/index.ts
 export * from './user';
 export * from './session';
 export * from './account';

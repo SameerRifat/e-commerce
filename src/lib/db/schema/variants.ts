@@ -1,3 +1,4 @@
+// src/lib/db/schema/variants.ts
 import { pgTable, text, timestamp, uuid, integer, numeric, jsonb, real } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';

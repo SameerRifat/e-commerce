@@ -1,3 +1,4 @@
+// src/lib/db/schema/products.ts
 import { pgTable, text, timestamp, uuid, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';

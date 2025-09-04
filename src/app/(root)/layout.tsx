@@ -1,9 +1,13 @@
+// src/app/(root)/layout.tsx
 import { Navbar, Footer } from "@/components";
+import { getCurrentUser } from "@/lib/auth/actions";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+
   return (
     <>
-      <Navbar />
+      <Navbar user={user} />
       {children}
       <Footer />
     </>
