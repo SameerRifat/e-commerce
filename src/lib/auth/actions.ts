@@ -70,6 +70,10 @@ export async function signUp(formData: FormData) {
 
   const data = signUpSchema.parse(rawData);
 
+  // Store guest session token before signup for cart merging
+  const cookieStore = await cookies();
+  const guestSessionToken = cookieStore.get("guest_session")?.value;
+
   const res = await auth.api.signUpEmail({
     body: {
       email: data.email,
@@ -77,6 +81,12 @@ export async function signUp(formData: FormData) {
       name: data.name,
     },
   });
+
+  // Merge guest cart with new user account
+  if (guestSessionToken && res.user?.id) {
+    const { mergeGuestCartWithUserCart } = await import('@/lib/actions/cart');
+    await mergeGuestCartWithUserCart(res.user.id, guestSessionToken);
+  }
 
   await migrateGuestToUser();
   return { ok: true, userId: res.user?.id };
@@ -95,12 +105,22 @@ export async function signIn(formData: FormData) {
 
   const data = signInSchema.parse(rawData);
 
+  // Store guest session token before signin for cart merging
+  const cookieStore = await cookies();
+  const guestSessionToken = cookieStore.get("guest_session")?.value;
+
   const res = await auth.api.signInEmail({
     body: {
       email: data.email,
       password: data.password,
     },
   });
+
+  // Merge guest cart with existing user account
+  if (guestSessionToken && res.user?.id) {
+    const { mergeGuestCartWithUserCart } = await import('@/lib/actions/cart');
+    await mergeGuestCartWithUserCart(res.user.id, guestSessionToken);
+  }
 
   await migrateGuestToUser();
   return { ok: true, userId: res.user?.id };

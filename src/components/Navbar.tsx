@@ -1,8 +1,11 @@
+// src/components/Navbar.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Search, ShoppingBag } from "lucide-react";
+import { useCartStore } from "@/store/cart";
 
 interface User {
   id: string;
@@ -24,17 +27,20 @@ const NAV_LINKS = [
 
 export default function Navbar({ user }: { user: User | null }) {
   const [open, setOpen] = useState(false);
+  const { getItemCount, toggleCart } = useCartStore();
+  
+  const itemCount = getItemCount();
 
   console.log('[Navbar] USER:', JSON.stringify(user, null, 2));
 
   return (
-    <header className="sticky top-0 z-50 bg-light-100">
+    <header className="sticky top-0 z-50 bg-light-100 border-b border-light-300">
       <nav
         className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
         aria-label="Primary"
       >
-        <Link href="/" aria-label="Nike Home" className="flex items-center">
-          <Image src="/logo.svg" alt="Nike" width={28} height={28} priority className="invert" />
+        <Link href="/" aria-label="Cosmetics Home" className="flex items-center">
+          <Image src="/logo.svg" alt="Logo" width={28} height={28} priority className="invert" />
         </Link>
 
         <ul className="hidden items-center gap-8 md:flex">
@@ -51,12 +57,33 @@ export default function Navbar({ user }: { user: User | null }) {
         </ul>
 
         <div className="hidden items-center gap-6 md:flex">
-          <button className="text-body text-dark-900 transition-colors hover:text-dark-700">
-            Search
+          <button 
+            className="flex items-center gap-2 text-body text-dark-900 transition-colors hover:text-dark-700"
+            aria-label="Search products"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden lg:inline">Search</span>
           </button>
-          <button className="text-body text-dark-900 transition-colors hover:text-dark-700">
-            My Cart (2)
+          
+          <button 
+            onClick={toggleCart}
+            className="flex items-center gap-2 text-body text-dark-900 transition-colors hover:text-dark-700 relative"
+            aria-label={`Open cart with ${itemCount} items`}
+          >
+            <div className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium min-w-[1.25rem]">
+                  {itemCount > 99 ? '99+' : itemCount}
+                </span>
+              )}
+            </div>
+            <span className="hidden lg:inline">
+              My Cart 
+              {/* {itemCount > 0 && `(${itemCount})`} */}
+            </span>
           </button>
+
           {user && (
             <div className="flex items-center gap-2">
               {user.image ? (
@@ -77,6 +104,10 @@ export default function Navbar({ user }: { user: User | null }) {
               <span className="text-sm text-dark-900">{user.name}</span>
             </div>
           )}
+
+          <Link href="/dashboard" className="text-body text-dark-900 transition-colors hover:text-dark-700">
+            Dashboard
+          </Link>
         </div>
 
         <button
@@ -110,8 +141,40 @@ export default function Navbar({ user }: { user: User | null }) {
             </li>
           ))}
           <li className="flex items-center justify-between pt-2">
-            <button className="text-body">Search</button>
-            <button className="text-body">My Cart (2)</button>
+            <button 
+              className="flex items-center gap-2 text-body text-dark-900 hover:text-dark-700"
+              aria-label="Search products"
+            >
+              <Search className="h-4 w-4" />
+              Search
+            </button>
+            
+            <button 
+              onClick={() => {
+                toggleCart();
+                setOpen(false);
+              }}
+              className="flex items-center gap-2 text-body text-dark-900 hover:text-dark-700"
+              aria-label={`Open cart with ${itemCount} items`}
+            >
+              <div className="relative">
+                <ShoppingBag className="h-4 w-4" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium text-[10px]">
+                    {itemCount > 9 ? '9+' : itemCount}
+                  </span>
+                )}
+              </div>
+              My Cart {itemCount > 0 && `(${itemCount})`}
+            </button>
+            
+            <Link 
+              href="/dashboard" 
+              className="text-body text-dark-900 hover:text-dark-700"
+              onClick={() => setOpen(false)}
+            >
+              Dashboard
+            </Link>
           </li>
           {user && (
             <li className="pt-2 border-t border-light-300">

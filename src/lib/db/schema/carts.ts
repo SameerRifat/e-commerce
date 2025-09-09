@@ -1,3 +1,4 @@
+// src/lib/db/schema/carts.ts
 import { pgTable, uuid, timestamp, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
