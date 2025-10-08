@@ -8,6 +8,7 @@ export const categories = pgTable('categories', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   parentId: uuid('parent_id'),
+  imageUrl: text('image_url'), // New field for category images
 }, (t) => ({
   parentFk: foreignKey({
     columns: [t.parentId],
@@ -27,9 +28,12 @@ export const insertCategorySchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   parentId: z.string().uuid().optional().nullable(),
+  imageUrl: z.string().url().optional().nullable(), // Added imageUrl to schema
 });
+
 export const selectCategorySchema = insertCategorySchema.extend({
   id: z.string().uuid(),
 });
+
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type SelectCategory = z.infer<typeof selectCategorySchema>;

@@ -22,3 +22,4 @@ export * from './wishlists';
 export * from './filters/genders';
 export * from './filters/colors';
 export * from './filters/sizes';
+export * from './filters/size-categories';

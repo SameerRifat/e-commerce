@@ -1,3 +1,4 @@
+// src/lib/utils/query.ts (Fixed parseFilterParams)
 import qs from "query-string";
 
 type QueryValue = string | number | boolean | null | undefined | string[] | number[] | boolean[];
@@ -76,7 +77,6 @@ export function getStringParam(search: string, key: string): string | undefined 
   if (v === undefined) return undefined;
   return Array.isArray(v) ? (v[0] ? String(v[0]) : undefined) : String(v);
 }
-/* New helpers for products */
 
 export type NormalizedProductFilters = {
   search?: string;
@@ -93,28 +93,50 @@ export type NormalizedProductFilters = {
   limit?: number;
 };
 
+// ===== FIXED: Handle both Next.js native params and bracket notation =====
 export function parseFilterParams(sp: Record<string, string | string[] | undefined>): NormalizedProductFilters {
-  const getArr = (k: string) => {
-    const v1 = sp[k];
-    const v2 = sp[`${k}[]`];
-    const arr1 = Array.isArray(v1) ? v1.map(String) : v1 === undefined ? [] : [String(v1)];
-    const arr2 = Array.isArray(v2) ? (v2 as string[]).map(String) : v2 === undefined ? [] : [String(v2 as string)];
-    return [...arr1, ...arr2];
+  // Helper to get array values - handles both 'key' and 'key[]' formats
+  const getArr = (k: string): string[] => {
+    // Try direct key first (Next.js native format)
+    const direct = sp[k];
+    if (direct !== undefined) {
+      return Array.isArray(direct) ? direct.map(String) : [String(direct)];
+    }
+    
+    // Try bracket notation (query-string format)
+    const bracket = sp[`${k}[]`];
+    if (bracket !== undefined) {
+      return Array.isArray(bracket) ? bracket.map(String) : [String(bracket)];
+    }
+    
+    return [];
   };
-  const getStr = (k: string) => {
-    const v = sp[k] ?? sp[`${k}[]`];
-    if (v === undefined) return undefined;
-    return Array.isArray(v) ? (v[0] ? String(v[0]) : undefined) : String(v);
+
+  // Helper to get string values
+  const getStr = (k: string): string | undefined => {
+    const direct = sp[k];
+    if (direct !== undefined) {
+      return Array.isArray(direct) ? (direct[0] ? String(direct[0]) : undefined) : String(direct);
+    }
+    
+    const bracket = sp[`${k}[]`];
+    if (bracket !== undefined) {
+      return Array.isArray(bracket) ? (bracket[0] ? String(bracket[0]) : undefined) : String(bracket);
+    }
+    
+    return undefined;
   };
 
   const search = getStr("search")?.trim() || undefined;
 
-  const genderSlugs = getArr("gender").map((s) => s.toLowerCase());
-  const sizeSlugs = getArr("size").map((s) => s.toLowerCase());
-  const colorSlugs = getArr("color").map((s) => s.toLowerCase());
-  const brandSlugs = getArr("brand").map((s) => s.toLowerCase());
-  const categorySlugs = getArr("category").map((s) => s.toLowerCase());
+  // Get filter arrays and normalize to lowercase
+  const genderSlugs = getArr("gender").map((s) => s.toLowerCase()).filter(Boolean);
+  const sizeSlugs = getArr("size").map((s) => s.toLowerCase()).filter(Boolean);
+  const colorSlugs = getArr("color").map((s) => s.toLowerCase()).filter(Boolean);
+  const brandSlugs = getArr("brand").map((s) => s.toLowerCase()).filter(Boolean);
+  const categorySlugs = getArr("category").map((s) => s.toLowerCase()).filter(Boolean);
 
+  // Parse price ranges
   const priceRangesStr = getArr("price");
   const priceRanges: Array<[number | undefined, number | undefined]> = priceRangesStr
     .map((r) => {
@@ -126,7 +148,7 @@ export function parseFilterParams(sp: Record<string, string | string[] | undefin
         number | undefined
       ];
     })
-    .filter(() => true);
+    .filter(([min, max]) => min !== undefined || max !== undefined);
 
   const priceMin = getStr("priceMin") ? Number(getStr("priceMin")) : undefined;
   const priceMax = getStr("priceMax") ? Number(getStr("priceMax")) : undefined;
@@ -143,14 +165,14 @@ export function parseFilterParams(sp: Record<string, string | string[] | undefin
 
   return {
     search,
-    genderSlugs,
-    sizeSlugs,
-    colorSlugs,
-    brandSlugs,
-    categorySlugs,
+    genderSlugs: genderSlugs.length ? genderSlugs : undefined,
+    sizeSlugs: sizeSlugs.length ? sizeSlugs : undefined,
+    colorSlugs: colorSlugs.length ? colorSlugs : undefined,
+    brandSlugs: brandSlugs.length ? brandSlugs : undefined,
+    categorySlugs: categorySlugs.length ? categorySlugs : undefined,
     priceMin: priceMin !== undefined && !Number.isNaN(priceMin) ? priceMin : undefined,
     priceMax: priceMax !== undefined && !Number.isNaN(priceMax) ? priceMax : undefined,
-    priceRanges,
+    priceRanges: priceRanges.length ? priceRanges : undefined,
     sort,
     page,
     limit,
@@ -159,4 +181,52 @@ export function parseFilterParams(sp: Record<string, string | string[] | undefin
 
 export function buildProductQueryObject(filters: NormalizedProductFilters) {
   return filters;
+}
+
+export function buildFilterBadges(searchParams: Record<string, string | string[] | undefined>): string[] {
+  const activeBadges: string[] = [];
+  
+  // Helper to get arrays from params
+  const getArr = (k: string): string[] => {
+    const direct = searchParams[k];
+    const bracket = searchParams[`${k}[]`];
+    
+    if (direct !== undefined) {
+      return Array.isArray(direct) ? direct : [String(direct)];
+    }
+    if (bracket !== undefined) {
+      return Array.isArray(bracket) ? bracket : [String(bracket)];
+    }
+    return [];
+  };
+  
+  // Gender badges
+  const genders = getArr("gender");
+  genders.forEach((g) => activeBadges.push(String(g)[0].toUpperCase() + String(g).slice(1)));
+  
+  // Brand badges
+  const brands = getArr("brand");
+  brands.forEach((b) => activeBadges.push(String(b)[0].toUpperCase() + String(b).slice(1)));
+  
+  // Category badges
+  const categories = getArr("category");
+  categories.forEach((c) => activeBadges.push(String(c)[0].toUpperCase() + String(c).slice(1)));
+  
+  // Size badges
+  const sizes = getArr("size");
+  sizes.forEach((s) => activeBadges.push(`Size: ${s}`));
+  
+  // Color badges
+  const colors = getArr("color");
+  colors.forEach((c) => activeBadges.push(String(c)[0].toUpperCase() + String(c).slice(1)));
+  
+  // Price badges
+  const prices = getArr("price");
+  prices.forEach((p) => {
+    const [min, max] = String(p).split("-");
+    const label = min && max ? `$${min} - $${max}` : min && !max ? `Over $${min}` : `$0 - $${max}`;
+    activeBadges.push(label);
+  });
+  
+  return activeBadges;
 }

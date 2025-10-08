@@ -1,3 +1,4 @@
+// src/lib/db/schema/payments.ts
 import { pgEnum, pgTable, timestamp, uuid, text } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';

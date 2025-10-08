@@ -3,22 +3,29 @@ import { pgTable, text, integer, uuid } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { relations } from 'drizzle-orm';
 import { productVariants } from '../variants';
+import { sizeCategories } from './size-categories';
 
 export const sizes = pgTable('sizes', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   sortOrder: integer('sort_order').notNull(),
+  categoryId: uuid('category_id').references(() => sizeCategories.id),
 });
 
-export const sizesRelations = relations(sizes, ({ many }) => ({
+export const sizesRelations = relations(sizes, ({ many, one }) => ({
   variants: many(productVariants),
+  category: one(sizeCategories, {
+    fields: [sizes.categoryId],
+    references: [sizeCategories.id],
+  }),
 }));
 
 export const insertSizeSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   sortOrder: z.number().int(),
+  categoryId: z.string().uuid().optional().nullable(),
 });
 export const selectSizeSchema = insertSizeSchema.extend({
   id: z.string().uuid(),

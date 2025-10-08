@@ -23,7 +23,7 @@ const columns = [
 export default function Footer() {
   return (
     <footer className="bg-dark-900 text-light-100">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="custom_container py-12">
         <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-12">
           <div className="flex items-start md:col-span-3">
             <Image src="/logo.svg" alt="Nike" width={48} height={48} />

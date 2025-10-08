@@ -1,3 +1,4 @@
+// src/lib/db/schema/coupons.ts
 import { pgEnum, pgTable, uuid, text, numeric, timestamp, integer } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 

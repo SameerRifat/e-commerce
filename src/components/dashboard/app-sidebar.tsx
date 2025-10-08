@@ -1,122 +1,134 @@
+// src/components/dashboard/app-sidebar.tsx
 "use client"
 
 import * as React from "react"
-import {
-    BookOpen,
-    Bot,
-    Command,
-    Frame,
-    LifeBuoy,
-    Map,
-    PieChart,
-    Send,
-    Settings2,
-    SquareTerminal,
-} from "lucide-react"
+import { Package, Palette, Layers, Images, Command, Boxes, Sparkles, LifeBuoy, Send, Frame, PieChart, ShoppingBag} from "lucide-react"
 
-// import { NavProjects } from "@/components/nav-projects"
-// import { NavSecondary } from "@/components/nav-secondary"
-// import { NavUser } from "@/components/nav-user"
-import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem} from "@/components/ui/sidebar"
 import { NavMain } from "./nav-main"
 
 const data = {
     user: {
-        name: "shadcn",
-        email: "m@example.com",
-        avatar: "/avatars/shadcn.jpg",
+        name: "Admin",
+        email: "admin@example.com",
+        avatar: "/avatars/admin.jpg",
     },
     navMain: [
         {
-            title: "Playground",
-            url: "#",
-            icon: SquareTerminal,
+            title: "Products",
+            url: "/dashboard/products",
+            icon: Package,
             isActive: true,
             items: [
                 {
-                    title: "History",
-                    url: "#",
+                    title: "All Products",
+                    url: "/dashboard/products",
                 },
                 {
-                    title: "Starred",
-                    url: "#",
+                    title: "Create Product",
+                    url: "/dashboard/products/new",
                 },
                 {
-                    title: "Settings",
-                    url: "#",
-                },
-            ],
-        },
-        {
-            title: "Models",
-            url: "#",
-            icon: Bot,
-            items: [
-                {
-                    title: "Genesis",
-                    url: "#",
-                },
-                {
-                    title: "Explorer",
-                    url: "#",
-                },
-                {
-                    title: "Quantum",
-                    url: "#",
+                    title: "Manage Variants",
+                    url: "/dashboard/products/variants",
                 },
             ],
         },
         {
-            title: "Documentation",
-            url: "#",
-            icon: BookOpen,
+            title: "Orders",
+            url: "/dashboard/orders",
+            icon: ShoppingBag,
             items: [
                 {
-                    title: "Introduction",
-                    url: "#",
+                    title: "All Orders",
+                    url: "/dashboard/orders",
                 },
                 {
-                    title: "Get Started",
-                    url: "#",
+                    title: "Pending",
+                    url: "/dashboard/orders?status=pending",
                 },
                 {
-                    title: "Tutorials",
-                    url: "#",
+                    title: "Processing",
+                    url: "/dashboard/orders?status=processing",
                 },
                 {
-                    title: "Changelog",
-                    url: "#",
+                    title: "Shipped",
+                    url: "/dashboard/orders?status=shipped",
                 },
             ],
         },
         {
-            title: "Settings",
-            url: "#",
-            icon: Settings2,
+            title: "Categories",
+            url: "/dashboard/categories",
+            icon: Layers,
             items: [
                 {
-                    title: "General",
-                    url: "#",
+                    title: "All Categories",
+                    url: "/dashboard/categories",
                 },
                 {
-                    title: "Team",
-                    url: "#",
+                    title: "Add Category",
+                    url: "/dashboard/categories/new",
+                },
+            ],
+        },
+        {
+            title: "Brands",
+            url: "/dashboard/brands",
+            icon: Sparkles,
+            items: [
+                {
+                    title: "All Brands",
+                    url: "/dashboard/brands",
                 },
                 {
-                    title: "Billing",
-                    url: "#",
+                    title: "Add Brand",
+                    url: "/dashboard/brands/new",
+                },
+            ],
+        },
+        {
+            title: "Collections",
+            url: "/dashboard/collections",
+            icon: Boxes,
+            items: [
+                {
+                    title: "All Collections",
+                    url: "/dashboard/collections",
                 },
                 {
-                    title: "Limits",
-                    url: "#",
+                    title: "Add Collection",
+                    url: "/dashboard/collections/new",
+                },
+            ],
+        },
+        {
+            title: "Attributes",
+            url: "/dashboard/attributes",
+            icon: Palette,
+            items: [
+                {
+                    title: "Colors",
+                    url: "/dashboard/attributes/colors",
+                },
+                {
+                    title: "Sizes",
+                    url: "/dashboard/attributes/sizes",
+                },
+            ],
+        },
+        {
+            title: "Media",
+            url: "/dashboard/media",
+            icon: Images,
+            items: [
+                {
+                    title: "Image Library",
+                    url: "/dashboard/media",
+                },
+                {
+                    title: "Upload Images",
+                    url: "/dashboard/media/upload",
                 },
             ],
         },
@@ -164,8 +176,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     <Command className="size-4" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">Acme Inc</span>
-                                    <span className="truncate text-xs">Enterprise</span>
+                                    <span className="truncate font-medium">Cosmetics Dashboard</span>
+                                    <span className="truncate text-xs">Product Management</span>
                                 </div>
                             </a>
                         </SidebarMenuButton>
@@ -174,12 +186,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarHeader>
             <SidebarContent>
                 <NavMain items={data.navMain} />
-                {/* <NavProjects projects={data.projects} />
-                <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
             </SidebarContent>
             <SidebarFooter>
                 SidebarFooter
-                {/* <NavUser user={data.user} /> */}
             </SidebarFooter>
         </Sidebar>
     )

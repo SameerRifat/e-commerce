@@ -2,43 +2,65 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Filter, X, ChevronDown, ChevronUp } from "lucide-react";
 import { getArrayParam, removeParams, toggleArrayParam } from "@/lib/utils/query";
+import { type FilterOptionsResult, type FilterOption, type SizeGroup } from "@/lib/actions/filters";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const GENDERS = ["men", "women", "unisex"] as const;
-const SIZES = ["XS", "S", "M", "L", "XL"] as const;
-const COLORS = ["black", "white", "red", "green", "blue", "grey"] as const;
-const PRICES = [
-  { id: "0-50", label: "$0 - $50" },
-  { id: "50-100", label: "$50 - $100" },
-  { id: "100-150", label: "$100 - $150" },
-  { id: "150-", label: "Over $150" },
-] as const;
+type GroupKey = "gender" | "brand" | "category" | "size" | "color" | "price";
 
-type GroupKey = "gender" | "size" | "color" | "price";
+interface FiltersProps {
+  filterOptions: FilterOptionsResult;
+}
 
-export default function Filters() {
+export default function Filters({ filterOptions }: FiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = useMemo(() => `?${searchParams.toString()}`, [searchParams]);
 
-  const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<GroupKey, boolean>>({
     gender: true,
+    brand: true,
+    category: true,
     size: true,
     color: true,
     price: true,
   });
 
+  // Calculate active filter counts
   const activeCounts = {
     gender: getArrayParam(search, "gender").length,
+    brand: getArrayParam(search, "brand").length,
+    category: getArrayParam(search, "category").length,
     size: getArrayParam(search, "size").length,
     color: getArrayParam(search, "color").length,
     price: getArrayParam(search, "price").length,
   };
 
+  // Total active filters
+  const totalActiveFilters = Object.values(activeCounts).reduce((sum, count) => sum + count, 0);
+
   useEffect(() => {
-    setOpen(false);
+    setMobileOpen(false);
   }, [search]);
 
   const onToggle = (key: GroupKey, value: string) => {
@@ -47,252 +69,393 @@ export default function Filters() {
   };
 
   const clearAll = () => {
-    const url = removeParams(pathname, search, ["gender", "size", "color", "price", "page"]);
+    const url = removeParams(pathname, search, ["gender", "brand", "category", "size", "color", "price", "page"]);
     router.push(url, { scroll: false });
   };
 
-  const Group = ({
+  // Enhanced Filter Group Component
+  const FilterGroup = ({
     title,
     children,
     k,
+    count = 0,
   }: {
     title: string;
-    children: import("react").ReactNode;
+    children: React.ReactNode;
     k: GroupKey;
+    count?: number;
   }) => (
-    <div className="border-b border-light-300 py-4">
-      <button
-        className="flex w-full items-center justify-between text-body-medium text-dark-900"
-        onClick={() => setExpanded((s) => ({ ...s, [k]: !s[k] }))}
-        aria-expanded={expanded[k]}
-        aria-controls={`${k}-section`}
-      >
-        <span>{title}</span>
-        <span className="text-caption text-dark-700">{expanded[k] ? "−" : "+"}</span>
-      </button>
-      <div id={`${k}-section`} className={`${expanded[k] ? "mt-3 block" : "hidden"}`}>
+    <Collapsible
+      open={expanded[k]}
+      onOpenChange={(open) => setExpanded((s) => ({ ...s, [k]: open }))}
+    >
+      <CollapsibleTrigger className="flex w-full items-center justify-between py-3 text-sm font-medium hover:text-primary transition-colors">
+        <div className="flex items-center gap-2">
+          <span>{title}</span>
+          {count > 0 && (
+            <Badge variant="secondary" className="h-5 px-2 text-xs">
+              {count}
+            </Badge>
+          )}
+        </div>
+        {expanded[k] ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pb-4">
         {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+
+  // Enhanced Filter Options List
+  const FilterOptionsList = ({
+    options,
+    groupKey,
+    layout = 'vertical',
+    showColors = false
+  }: {
+    options: FilterOption[];
+    groupKey: GroupKey;
+    layout?: 'vertical' | 'grid';
+    showColors?: boolean;
+  }) => {
+
+    const selectedValues = getArrayParam(search, groupKey);
+
+    return (
+      <div className={layout === 'grid' ? "grid grid-cols-1 gap-2" : "space-y-2"}>
+        {options.map((option) => {
+          const checked = selectedValues.includes(option.slug);
+          const disabled = option.disabled || option.count === 0;
+          const id = `${groupKey}-${option.slug}`;
+
+          return (
+            <div key={option.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={id}
+                checked={checked}
+                disabled={disabled}
+                onCheckedChange={() => onToggle(groupKey, option.slug)}
+                className="h-4 w-4"
+              />
+              <Label
+                htmlFor={id}
+                className={`flex-1 text-sm cursor-pointer ${
+                  disabled ? 'text-muted-foreground' : ''
+                } ${showColors ? 'flex items-center gap-2' : ''}`}
+              >
+                {showColors && (
+                  <div
+                    className="w-3 h-3 !min-w-3 !min-h-3 rounded-full border border-border"
+                    style={{ 
+                      backgroundColor: (option as unknown as { hexCode: string }).hexCode || '#000'
+                    }}
+                  />
+                )}
+                <span className="capitalize">{option.name}</span>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  ({option.count})
+                </span>
+              </Label>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Enhanced Size Groups Component
+  const SizeGroups = ({ sizeGroups }: { sizeGroups: SizeGroup[] }) => {
+    const selectedValues = getArrayParam(search, "size");
+
+    return (
+      <div className="space-y-4">
+        {sizeGroups.map((group) => (
+          <div key={group.categoryId} className="space-y-2">
+            {sizeGroups.length > 1 && (
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {group.categoryName}
+              </h4>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              {group.sizes.map((size) => {
+                const checked = selectedValues.includes(size.slug);
+                const disabled = size.disabled || size.count === 0;
+                const id = `size-${size.slug}`;
+
+                return (
+                  <div key={size.id} className="flex items-center space-x-1">
+                    <Checkbox
+                      id={id}
+                      checked={checked}
+                      disabled={disabled}
+                      onCheckedChange={() => onToggle("size", size.slug)}
+                      className="h-3 w-3"
+                    />
+                    <Label
+                      htmlFor={id}
+                      className={`text-xs cursor-pointer ${
+                        disabled ? 'text-muted-foreground' : ''
+                      }`}
+                    >
+                      {size.name}
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Enhanced Price Ranges Component
+  const PriceRanges = () => {
+    const selectedValues = getArrayParam(search, "price");
+
+    return (
+      <div className="space-y-2">
+        {filterOptions.priceRanges.map((range) => {
+          const checked = selectedValues.includes(range.id);
+          const disabled = range.count === 0;
+          const id = `price-${range.id}`;
+
+          return (
+            <div key={range.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={id}
+                checked={checked}
+                disabled={disabled}
+                onCheckedChange={() => onToggle("price", range.id)}
+                className="h-4 w-4"
+              />
+              <Label
+                htmlFor={id}
+                className={`flex-1 text-sm cursor-pointer ${
+                  disabled ? 'text-muted-foreground' : ''
+                }`}
+              >
+                {range.label}
+                <span className="text-xs text-muted-foreground ml-auto">
+                  ({range.count})
+                </span>
+              </Label>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Desktop Filters Component
+  const DesktopFilters = () => (
+    <aside className="hidden lg:block">
+      <div className="sticky top-20">
+        <div className="rounded-lg border bg-card shadow-sm pl-4 pt-4 pb-4">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Filters</h3>
+            {/* {totalActiveFilters > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearAll} className="h-auto p-0 text-xs">
+                Clear all
+              </Button>
+            )} */}
+          </div>
+
+          <ScrollArea className="h-[calc(100vh-12rem)] pr-6">
+            <div className="space-y-1">
+              {filterOptions.genders.length > 0 && (
+                <>
+                  <FilterGroup
+                    title="Gender"
+                    k="gender"
+                    count={activeCounts.gender}
+                  >
+                    <FilterOptionsList options={filterOptions.genders} groupKey="gender" />
+                  </FilterGroup>
+                  <Separator />
+                </>
+              )}
+
+              {filterOptions.brands.length > 0 && (
+                <>
+                  <FilterGroup
+                    title="Brand"
+                    k="brand"
+                    count={activeCounts.brand}
+                  >
+                    <FilterOptionsList options={filterOptions.brands} groupKey="brand" />
+                  </FilterGroup>
+                  <Separator />
+                </>
+              )}
+
+              {filterOptions.categories.length > 0 && (
+                <>
+                  <FilterGroup
+                    title="Category"
+                    k="category"
+                    count={activeCounts.category}
+                  >
+                    <FilterOptionsList options={filterOptions.categories} groupKey="category" />
+                  </FilterGroup>
+                  <Separator />
+                </>
+              )}
+
+              {filterOptions.sizes.length > 0 && (
+                <>
+                  <FilterGroup
+                    title="Size"
+                    k="size"
+                    count={activeCounts.size}
+                  >
+                    <SizeGroups sizeGroups={filterOptions.sizes} />
+                  </FilterGroup>
+                  <Separator />
+                </>
+              )}
+
+              {filterOptions.colors.length > 0 && (
+                <>
+                  <FilterGroup
+                    title="Color"
+                    k="color"
+                    count={activeCounts.color}
+                  >
+                    <FilterOptionsList
+                      options={filterOptions.colors}
+                      groupKey="color"
+                      layout="grid"
+                      showColors={true}
+                    />
+                  </FilterGroup>
+                  <Separator />
+                </>
+              )}
+
+              {filterOptions.priceRanges.length > 0 && (
+                <FilterGroup
+                  title="Price"
+                  k="price"
+                  count={activeCounts.price}
+                >
+                  <PriceRanges />
+                </FilterGroup>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+    </aside>
+  );
+
+  // Mobile Filters Component
+  const MobileFilters = () => (
+    <div className="lg:hidden">
+      <div className="flex items-center justify-between mb-4">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
+              {totalActiveFilters > 0 && (
+                <Badge variant="secondary" className="h-5 px-2 text-xs">
+                  {totalActiveFilters}
+                </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-80 sm:w-96">
+            <SheetHeader>
+              <SheetTitle className="flex items-center justify-between">
+                <span>Filters</span>
+                {/* {totalActiveFilters > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearAll} className="h-auto p-0 text-xs">
+                    Clear all
+                  </Button>
+                )} */}
+              </SheetTitle>
+            </SheetHeader>
+            
+            <ScrollArea className="h-[calc(100vh-70px)] p-4 pt-0">
+              <div className="space-y-1">
+                {filterOptions.genders.length > 0 && (
+                  <>
+                    <FilterGroup title="Gender" k="gender" count={activeCounts.gender}>
+                      <FilterOptionsList options={filterOptions.genders} groupKey="gender" />
+                    </FilterGroup>
+                    <Separator />
+                  </>
+                )}
+
+                {filterOptions.brands.length > 0 && (
+                  <>
+                    <FilterGroup title="Brand" k="brand" count={activeCounts.brand}>
+                      <FilterOptionsList options={filterOptions.brands} groupKey="brand" />
+                    </FilterGroup>
+                    <Separator />
+                  </>
+                )}
+
+                {filterOptions.categories.length > 0 && (
+                  <>
+                    <FilterGroup title="Category" k="category" count={activeCounts.category}>
+                      <FilterOptionsList options={filterOptions.categories} groupKey="category" />
+                    </FilterGroup>
+                    <Separator />
+                  </>
+                )}
+
+                {filterOptions.sizes.length > 0 && (
+                  <>
+                    <FilterGroup title="Size" k="size" count={activeCounts.size}>
+                      <SizeGroups sizeGroups={filterOptions.sizes} />
+                    </FilterGroup>
+                    <Separator />
+                  </>
+                )}
+
+                {filterOptions.colors.length > 0 && (
+                  <>
+                    <FilterGroup title="Color" k="color" count={activeCounts.color}>
+                      <FilterOptionsList
+                        options={filterOptions.colors}
+                        groupKey="color"
+                        layout="grid"
+                        showColors={true}
+                      />
+                    </FilterGroup>
+                    <Separator />
+                  </>
+                )}
+
+                {filterOptions.priceRanges.length > 0 && (
+                  <FilterGroup title="Price" k="price" count={activeCounts.price}>
+                    <PriceRanges />
+                  </FilterGroup>
+                )}
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
+
+        {/* {totalActiveFilters > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearAll} className="text-xs">
+            Clear all
+          </Button>
+        )} */}
       </div>
     </div>
   );
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between md:hidden">
-        <button
-          className="rounded-md border border-light-300 px-3 py-2 text-body-medium"
-          onClick={() => setOpen(true)}
-          aria-haspopup="dialog"
-        >
-          Filters
-        </button>
-        <button className="text-caption text-dark-700 underline" onClick={clearAll}>
-          Clear all
-        </button>
-      </div>
-
-      <aside className="sticky top-20 hidden h-fit min-w-60 rounded-lg border border-light-300 bg-light-100 p-4 md:block">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-body-medium text-dark-900">Filters</h3>
-          <button className="text-caption text-dark-700 underline" onClick={clearAll}>
-            Clear all
-          </button>
-        </div>
-
-        <Group title={`Gender ${activeCounts.gender ? `(${activeCounts.gender})` : ""}`} k="gender">
-          <ul className="space-y-2">
-            {GENDERS.map((g) => {
-              const checked = getArrayParam(search, "gender").includes(g);
-              return (
-                <li key={g} className="flex items-center gap-2">
-                  <input
-                    id={`gender-${g}`}
-                    type="checkbox"
-                    className="h-4 w-4 accent-dark-900"
-                    checked={checked}
-                    onChange={() => onToggle("gender" as GroupKey, g)}
-                  />
-                  <label htmlFor={`gender-${g}`} className="text-body text-dark-900">
-                    {g[0].toUpperCase() + g.slice(1)}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </Group>
-
-        <Group title={`Size ${activeCounts.size ? `(${activeCounts.size})` : ""}`} k="size">
-          <ul className="grid grid-cols-5 gap-2">
-            {SIZES.map((s) => {
-              const checked = getArrayParam(search, "size").includes(s);
-              return (
-                <li key={s}>
-                  <label className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-dark-900"
-                      checked={checked}
-                      onChange={() => onToggle("size", s)}
-                    />
-                    <span className="text-body">{s}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </Group>
-
-        <Group title={`Color ${activeCounts.color ? `(${activeCounts.color})` : ""}`} k="color">
-          <ul className="grid grid-cols-2 gap-2">
-            {COLORS.map((c) => {
-              const checked = getArrayParam(search, "color").includes(c);
-              return (
-                <li key={c} className="flex items-center gap-2">
-                  <input
-                    id={`color-${c}`}
-                    type="checkbox"
-                    className="h-4 w-4 accent-dark-900"
-                    checked={checked}
-                    onChange={() => onToggle("color", c)}
-                  />
-                  <label htmlFor={`color-${c}`} className="text-body capitalize">
-                    {c}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </Group>
-
-        <Group title={`Price ${activeCounts.price ? `(${activeCounts.price})` : ""}`} k="price">
-          <ul className="space-y-2">
-            {PRICES.map((p) => {
-              const checked = getArrayParam(search, "price").includes(p.id);
-              return (
-                <li key={p.id} className="flex items-center gap-2">
-                  <input
-                    id={`price-${p.id}`}
-                    type="checkbox"
-                    className="h-4 w-4 accent-dark-900"
-                    checked={checked}
-                    onChange={() => onToggle("price", p.id)}
-                  />
-                  <label htmlFor={`price-${p.id}`} className="text-body">
-                    {p.label}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </Group>
-      </aside>
-
-      {open && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
-          <div
-            className="absolute inset-0 bg-black/40"
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute inset-y-0 left-0 w-80 max-w-[80%] overflow-auto bg-light-100 p-4 shadow-xl">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-body-medium">Filters</h3>
-              <button className="text-caption text-dark-700 underline" onClick={clearAll}>
-                Clear all
-              </button>
-            </div>
-            {/* Reuse the same desktop content by rendering the component again */}
-            <div className="md:hidden">
-              <Group title="Gender" k="gender">
-                <ul className="space-y-2">
-                  {GENDERS.map((g) => {
-                    const checked = getArrayParam(search, "gender").includes(g);
-                    return (
-                      <li key={g} className="flex items-center gap-2">
-                        <input
-                          id={`m-gender-${g}`}
-                          type="checkbox"
-                          className="h-4 w-4 accent-dark-900"
-                          checked={checked}
-                          onChange={() => onToggle("gender", g)}
-                        />
-                        <label htmlFor={`m-gender-${g}`} className="text-body">
-                          {g[0].toUpperCase() + g.slice(1)}
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Group>
-
-              <Group title="Size" k="size">
-                <ul className="grid grid-cols-4 gap-2">
-                  {SIZES.map((s) => {
-                    const checked = getArrayParam(search, "size").includes(s);
-                    return (
-                      <li key={s}>
-                        <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 accent-dark-900"
-                            checked={checked}
-                            onChange={() => onToggle("size", s)}
-                          />
-                          <span className="text-body">{s}</span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Group>
-
-              <Group title="Color" k="color">
-                <ul className="grid grid-cols-2 gap-2">
-                  {COLORS.map((c) => {
-                    const checked = getArrayParam(search, "color").includes(c);
-                    return (
-                      <li key={c} className="flex items-center gap-2">
-                        <input
-                          id={`m-color-${c}`}
-                          type="checkbox"
-                          className="h-4 w-4 accent-dark-900"
-                          checked={checked}
-                          onChange={() => onToggle("color", c)}
-                        />
-                        <label htmlFor={`m-color-${c}`} className="text-body capitalize">
-                          {c}
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Group>
-
-              <Group title="Price" k="price">
-                <ul className="space-y-2">
-                  {PRICES.map((p) => {
-                    const checked = getArrayParam(search, "price").includes(p.id);
-                    return (
-                      <li key={p.id} className="flex items-center gap-2">
-                        <input
-                          id={`m-price-${p.id}`}
-                          type="checkbox"
-                          className="h-4 w-4 accent-dark-900"
-                          checked={checked}
-                          onChange={() => onToggle("price", p.id)}
-                        />
-                        <label htmlFor={`m-price-${p.id}`} className="text-body">
-                          {p.label}
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Group>
-            </div>
-          </div>
-        </div>
-      )}
+      <MobileFilters />
+      <DesktopFilters />
     </>
   );
 }

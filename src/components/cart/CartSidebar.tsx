@@ -102,28 +102,40 @@ const CartSidebar = () => {
 
                                             <div className="flex-1 min-w-0 space-y-1">
                                                 <h4 className="font-medium text-sm line-clamp-2">
-                                                    {item.name}
+                                                    <Link 
+                                                        href={`/products/${item.productId}`}
+                                                        className="hover:text-primary transition-colors"
+                                                        onClick={() => toggleCart()}
+                                                    >
+                                                        {item.name}
+                                                    </Link>
                                                 </h4>
                                                 
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                     {/* Color swatch and name */}
-                                                    <div className="flex items-center gap-1">
-                                                        <div 
-                                                            className="w-3 h-3 rounded-full border border-gray-200"
-                                                            style={{ backgroundColor: item.color.hexCode }}
-                                                            title={item.color.name}
-                                                        />
-                                                        <span>{item.color.name}</span>
-                                                    </div>
+                                                    {item.color && (
+                                                        <div className="flex items-center gap-1">
+                                                            <div 
+                                                                className="w-3 h-3 rounded-full border border-gray-200"
+                                                                style={{ backgroundColor: item.color.hexCode }}
+                                                                title={item.color.name}
+                                                            />
+                                                            <span>{item.color.name}</span>
+                                                        </div>
+                                                    )}
                                                     
                                                     {/* Size */}
-                                                    <span>•</span>
-                                                    <span>{item.size.name}</span>
+                                                    {item.size && (
+                                                        <>
+                                                            {item.color && <span>•</span>}
+                                                            <span>{item.size.name}</span>
+                                                        </>
+                                                    )}
                                                     
                                                     {/* Stock status */}
                                                     {item.inStock <= 5 && (
                                                         <>
-                                                            <span>•</span>
+                                                            {(item.color || item.size) && <span>•</span>}
                                                             <span className="text-orange-600">
                                                                 {item.inStock === 0 ? 'Out of stock' : `Only ${item.inStock} left`}
                                                             </span>

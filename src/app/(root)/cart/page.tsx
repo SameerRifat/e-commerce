@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getCart } from "@/lib/actions/cart";
 import { getCurrentUser } from "@/lib/auth/actions";
-import { CartPageClient } from "./components/CartPageClient";
 import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CartPageClient } from "@/components/cart/CartPageClient";
 
 // Loading component for cart items
 function CartItemsSkeleton() {
@@ -65,7 +65,7 @@ async function CartContent() {
   }
 
   return (
-    <CartPageClient 
+    <CartPageClient
       initialItems={cartData.items} 
       initialTotal={cartData.total}
       user={user}

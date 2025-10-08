@@ -1,3 +1,4 @@
+// src/lib/db/schema/wishlists.ts
 import { pgTable, uuid, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
