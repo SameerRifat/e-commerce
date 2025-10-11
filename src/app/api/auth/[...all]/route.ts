@@ -1,3 +1,4 @@
+// src/app/api/auth/[...all]/route.ts
 import { NextRequest } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 

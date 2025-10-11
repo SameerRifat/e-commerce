@@ -1,5 +1,13 @@
 erDiagram
-    %% User Management
+    %% Authentication & User Management
+    users ||--o{ sessions : "has"
+    users ||--o{ accounts : "has"
+    users ||--o{ addresses : "has"
+    users ||--o{ reviews : "writes"
+    users ||--o{ wishlists : "has"
+    users ||--o{ carts : "owns"
+    users ||--o{ orders : "places"
+
     users {
         uuid id PK
         text name
@@ -9,7 +17,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     sessions {
         uuid id PK
         uuid user_id FK
@@ -20,7 +28,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     accounts {
         uuid id PK
         uuid user_id FK
@@ -36,7 +44,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     verifications {
         uuid id PK
         text identifier
@@ -45,7 +53,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     guests {
         uuid id PK
         text session_token UK
@@ -53,7 +61,32 @@ erDiagram
         timestamp expires_at
     }
 
-    %% Product Catalog
+    guests ||--o{ carts : "has"
+
+    %% Addresses
+    addresses {
+        uuid id PK
+        uuid user_id FK
+        text type "shipping|billing"
+        text full_name
+        text line1
+        text line2
+        text city
+        int city_id
+        text state
+        int state_id
+        text country
+        text country_code
+        int country_id
+        text postal_code
+        text phone
+        boolean is_default
+    }
+
+    %% Product Catalog Core
+    categories ||--o{ categories : "parent-child"
+    categories ||--o{ products : "contains"
+    
     categories {
         uuid id PK
         text name
@@ -61,6 +94,8 @@ erDiagram
         uuid parent_id FK
         text image_url
     }
+
+    brands ||--o{ products : "manufactures"
     
     brands {
         uuid id PK
@@ -68,34 +103,15 @@ erDiagram
         text slug UK
         text logo_url
     }
+
+    genders ||--o{ products : "categorizes"
     
     genders {
         uuid id PK
         text label
         text slug UK
     }
-    
-    colors {
-        uuid id PK
-        text name
-        text slug UK
-        text hex_code
-    }
-    
-    size_categories {
-        uuid id PK
-        text name UK
-        timestamp created_at
-    }
-    
-    sizes {
-        uuid id PK
-        text name
-        text slug UK
-        integer sort_order
-        uuid category_id FK
-    }
-    
+
     products {
         uuid id PK
         text name
@@ -104,18 +120,34 @@ erDiagram
         uuid gender_id FK
         uuid brand_id FK
         boolean is_published
-        text product_type
+        text product_type "simple|configurable"
         numeric price
         numeric sale_price
         text sku
-        integer in_stock
+        int in_stock
         real weight
         jsonb dimensions
-        uuid default_variant_id FK
+        uuid default_variant_id
         timestamp created_at
         timestamp updated_at
     }
-    
+
+    products ||--o{ product_variants : "has"
+    products ||--o{ product_images : "has"
+    products ||--o{ reviews : "receives"
+    products ||--o{ wishlists : "featured-in"
+    products ||--o{ cart_items : "added-to"
+    products ||--o{ order_items : "included-in"
+    products ||--o{ product_collections : "belongs-to"
+    products ||--o{ hero_slides : "linked-in"
+
+    %% Product Variants
+    colors ||--o{ product_variants : "used-in"
+    sizes ||--o{ product_variants : "used-in"
+    product_variants ||--o{ product_images : "has"
+    product_variants ||--o{ cart_items : "selected"
+    product_variants ||--o{ order_items : "purchased"
+
     product_variants {
         uuid id PK
         uuid product_id FK
@@ -124,44 +156,73 @@ erDiagram
         numeric sale_price
         uuid color_id FK
         uuid size_id FK
-        integer in_stock
+        int in_stock
         real weight
         jsonb dimensions
         timestamp created_at
     }
-    
+
     product_images {
         uuid id PK
         uuid product_id FK
         uuid variant_id FK
         text url
-        integer sort_order
+        int sort_order
         boolean is_primary
     }
-    
+
+    %% Filter Options
+    colors {
+        uuid id PK
+        text name
+        text slug UK
+        text hex_code
+    }
+
+    size_categories ||--o{ sizes : "groups"
+
+    size_categories {
+        uuid id PK
+        text name UK
+        timestamp created_at
+    }
+
+    sizes {
+        uuid id PK
+        text name
+        text slug UK
+        int sort_order
+        uuid category_id FK
+    }
+
+    %% Collections
+    collections ||--o{ product_collections : "contains"
+    collections ||--o{ hero_slides : "linked-in"
+
     collections {
         uuid id PK
         text name
         text slug UK
         timestamp created_at
     }
-    
+
     product_collections {
         uuid id PK
         uuid product_id FK
         uuid collection_id FK
     }
 
-    %% User Interactions
+    %% Reviews
     reviews {
         uuid id PK
         uuid product_id FK
         uuid user_id FK
-        integer rating
+        int rating "1-5"
         text comment
         timestamp created_at
     }
-    
+
+    %% Wishlists
     wishlists {
         uuid id PK
         uuid user_id FK
@@ -169,26 +230,9 @@ erDiagram
         timestamp added_at
     }
 
-    %% Shopping & Orders
-    addresses {
-        uuid id PK
-        uuid user_id FK
-        text type
-        text full_name
-        text line1
-        text line2
-        text city
-        integer city_id
-        text state
-        integer state_id
-        text country
-        text country_code
-        integer country_id
-        text postal_code
-        text phone
-        boolean is_default
-    }
-    
+    %% Shopping Cart
+    carts ||--o{ cart_items : "contains"
+
     carts {
         uuid id PK
         uuid user_id FK
@@ -196,20 +240,26 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     cart_items {
         uuid id PK
         uuid cart_id FK
         uuid product_id FK
         uuid product_variant_id FK
         boolean is_simple_product
-        integer quantity
+        int quantity
     }
-    
+
+    %% Orders
+    orders ||--o{ order_items : "contains"
+    orders ||--o{ payments : "paid-by"
+    addresses ||--o{ orders : "shipping-to"
+    addresses ||--o{ orders : "billing-to"
+
     orders {
         uuid id PK
         uuid user_id FK
-        text status
+        text status "pending|processing|paid|shipped|out_for_delivery|delivered|cancelled"
         numeric total_amount
         numeric subtotal
         numeric shipping_cost
@@ -221,76 +271,57 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     order_items {
         uuid id PK
         uuid order_id FK
         uuid product_id FK
         uuid product_variant_id FK
         boolean is_simple_product
-        integer quantity
+        int quantity
         numeric price_at_purchase
         numeric sale_price_at_purchase
     }
-    
+
+    %% Payments
     payments {
         uuid id PK
         uuid order_id FK
-        text method
-        text status
+        text method "stripe|paypal|cod"
+        text status "initiated|completed|failed"
         timestamp paid_at
         text transaction_id
     }
-    
+
+    %% Coupons
     coupons {
         uuid id PK
         text code UK
-        text discount_type
+        text discount_type "percentage|fixed"
         numeric discount_value
         timestamp expires_at
-        integer max_usage
-        integer used_count
+        int max_usage
+        int used_count
     }
 
-    %% Relationships
-    users ||--o{ sessions : "has"
-    users ||--o{ accounts : "has"
-    users ||--o{ addresses : "has"
-    users ||--o{ reviews : "writes"
-    users ||--o{ wishlists : "has"
-    users ||--o{ carts : "has"
-    users ||--o{ orders : "places"
-    
-    guests ||--o{ carts : "has"
-    
-    categories ||--o{ categories : "parent/child"
-    categories ||--o{ products : "categorizes"
-    
-    brands ||--o{ products : "manufactures"
-    genders ||--o{ products : "targets"
-    
-    size_categories ||--o{ sizes : "groups"
-    colors ||--o{ product_variants : "defines"
-    sizes ||--o{ product_variants : "defines"
-    
-    products ||--o{ product_variants : "has"
-    products ||--o{ product_images : "has"
-    products ||--o{ reviews : "receives"
-    products ||--o{ wishlists : "featured_in"
-    products ||--o{ cart_items : "added_to"
-    products ||--o{ order_items : "ordered_as"
-    
-    product_variants ||--o{ product_images : "has"
-    product_variants ||--o{ cart_items : "added_to"
-    product_variants ||--o{ order_items : "ordered_as"
-    
-    collections ||--o{ product_collections : "contains"
-    products ||--o{ product_collections : "belongs_to"
-    
-    carts ||--o{ cart_items : "contains"
-    
-    addresses ||--o{ orders : "shipping_to"
-    addresses ||--o{ orders : "billing_to"
-    
-    orders ||--o{ order_items : "contains"
-    orders ||--o{ payments : "paid_via"
+    %% Hero Slides
+    hero_slides {
+        uuid id PK
+        text title
+        int sort_order
+        boolean is_published
+        text desktop_media_type "image|video"
+        text desktop_media_url
+        text mobile_media_type "image|video"
+        text mobile_media_url
+        text link_type "product|collection|external|none"
+        uuid linked_product_id FK
+        uuid linked_collection_id FK
+        text external_url
+        text alt_text
+        text description
+        timestamp published_at
+        timestamp expires_at
+        timestamp created_at
+        timestamp updated_at
+    }

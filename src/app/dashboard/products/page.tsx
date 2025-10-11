@@ -9,7 +9,8 @@ import type {
   DashboardProductFilters,
   PageProps
 } from "@/types/dashboard";
-import { DashboardFilters, DashboardPagination, ProductsTableWrapper } from "@/components/dashboard/products";
+import { DashboardFilters, ProductsTableWrapper } from "@/components/dashboard/products";
+import DashboardPagination from "@/components/dashboard/dashboard-pagination";
 
 type ProductsPageProps = PageProps;
 
@@ -55,10 +56,6 @@ const ProductsPage: React.FC<ProductsPageProps> = async ({ searchParams }) => {
 
     const { products, totalCount, stats } = productsResult;
 
-    console.log('[products page] products: ', JSON.stringify(products, null, 2));
-
-
-    // Column definitions moved to ProductsTableWrapper client component
 
     return (
       <div className="space-y-6">

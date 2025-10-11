@@ -51,15 +51,18 @@ export async function getColors(params: ColorSearchParams = {}): Promise<Paginat
       sortOrder = "asc",
     } = params;
 
-    const offset = (page - 1) * limit;
+    // Ensure valid page and limit values
+    const validPage = Math.max(1, page);
+    const validLimit = Math.max(1, Math.min(limit, 100)); // Cap at 100
+    const offset = (validPage - 1) * validLimit;
 
     // Build search conditions
     const searchCondition = search
       ? or(
-          ilike(colors.name, `%${search}%`),
-          ilike(colors.slug, `%${search}%`),
-          ilike(colors.hexCode, `%${search}%`)
-        )
+        ilike(colors.name, `%${search}%`),
+        ilike(colors.slug, `%${search}%`),
+        ilike(colors.hexCode, `%${search}%`)
+      )
       : undefined;
 
     // Build sort condition
@@ -95,14 +98,14 @@ export async function getColors(params: ColorSearchParams = {}): Promise<Paginat
       .where(searchCondition)
       .groupBy(colors.id, colors.name, colors.slug, colors.hexCode)
       .orderBy(orderDirection)
-      .limit(limit)
+      .limit(validLimit)
       .offset(offset);
 
     // Handle edge case when offset is too high (no results returned)
     let total = 0;
     if (colorsResult.length > 0) {
       total = colorsResult[0].totalCount;
-    } else if (page > 1) {
+    } else if (validPage > 1) {
       // If no results but we're not on page 1, get total count separately
       const countResult = await db
         .select({
@@ -112,11 +115,11 @@ export async function getColors(params: ColorSearchParams = {}): Promise<Paginat
         .leftJoin(productVariants, eq(colors.id, productVariants.colorId))
         .where(searchCondition)
         .groupBy(colors.id, colors.name, colors.slug, colors.hexCode);
-      
+
       total = countResult.length;
     }
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / validLimit);
 
     return {
       colors: colorsResult.map(({ totalCount: _, ...color }) => ({
@@ -124,8 +127,8 @@ export async function getColors(params: ColorSearchParams = {}): Promise<Paginat
         variantCount: Number(color.variantCount),
       })),
       pagination: {
-        page,
-        limit,
+        page: validPage,
+        limit: validLimit,
         total,
         totalPages,
       },
@@ -167,7 +170,7 @@ export async function getColorById(colorId: string): Promise<SelectColor | null>
 
 // Optimized batch validation with single query
 export async function validateColorData(
-  data: ColorFormData, 
+  data: ColorFormData,
   excludeColorId?: string
 ): Promise<ActionResult> {
   // Schema validation first
@@ -200,7 +203,7 @@ export async function validateColorData(
       .where(eq(colors.slug, data.slug));
 
     // Check slug uniqueness
-    const existingColor = validationQuery.find(color => 
+    const existingColor = validationQuery.find(color =>
       color.slug === data.slug && color.id !== excludeColorId
     );
 
@@ -357,34 +360,34 @@ export async function deleteColor(colorId: string): Promise<ActionResult> {
 // Form submission actions remain unchanged (they use the optimized functions above)
 export async function submitColorForm(data: ColorFormData): Promise<never> {
   const result = await createColor(data);
-  
+
   if (result.success) {
     redirect('/dashboard/attributes/colors?success=created');
   } else {
     const errorParams = new URLSearchParams();
     errorParams.set('error', result.error || 'Unknown error');
-    
+
     if (result.fieldErrors) {
       errorParams.set('fieldErrors', JSON.stringify(result.fieldErrors));
     }
-    
+
     redirect(`/dashboard/attributes/colors/new?${errorParams.toString()}`);
   }
 }
 
 export async function submitColorUpdateForm(colorId: string, data: ColorFormData): Promise<never> {
   const result = await updateColor(colorId, data);
-  
+
   if (result.success) {
     redirect('/dashboard/attributes/colors?success=updated');
   } else {
     const errorParams = new URLSearchParams();
     errorParams.set('error', result.error || 'Unknown error');
-    
+
     if (result.fieldErrors) {
       errorParams.set('fieldErrors', JSON.stringify(result.fieldErrors));
     }
-    
+
     redirect(`/dashboard/attributes/colors/${colorId}/edit?${errorParams.toString()}`);
   }
 }

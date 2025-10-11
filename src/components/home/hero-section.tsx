@@ -14,14 +14,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({ desktopSlides, mobileSlides }
   return (
     <section className="relative w-full overflow-hidden bg-black max-w-[95rem] mx-auto">
       {/* Desktop Hero (hidden on small screens) */}
-      <div className="w-full h-full aspect-[2400/900] max-h-[calc(100vh-36px)]">
+      <div className="hidden md:block w-full h-full aspect-[2400/900] max-h-[calc(100vh-36px)]">
         <HeroCarousel slides={desktopSlides} />
       </div>
 
       {/* Mobile Hero (visible only on small screens) */}
-      {/* <div className="block md:hidden w-full h-full aspect-[1000/1333] max-h-[calc(100vh-32px)]">
+      <div className="block md:hidden w-full h-full aspect-[1000/1333] max-h-[calc(100vh-32px)]">
         <HeroCarousel slides={mobileSlides} />
-      </div> */}
+      </div>
 
       {/* Scroll Indicator - Hide on mobile for cleaner look */}
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 hidden lg:block pointer-events-none">

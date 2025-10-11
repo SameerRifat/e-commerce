@@ -75,6 +75,7 @@ const ProductPricingStep: React.FC<ProductPricingStepProps> = ({ control }) => {
                       />
                     </div>
                   </FormControl>
+                  <div className="hidden lg:block h-5"/>
                   {fieldState.error && fieldState.isTouched && (
                     <FormMessage />
                   )}

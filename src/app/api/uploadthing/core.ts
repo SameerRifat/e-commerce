@@ -11,7 +11,7 @@ export const ourFileRouter = {
     .middleware(async () => {
       // This code runs on your server before upload
       // You can add authentication checks here if needed
-      
+
       return { uploadedBy: "dashboard-user" }; // Whatever is returned here is accessible in onUploadComplete as `metadata`
     })
     .onUploadComplete(async ({ metadata, file }) => {
@@ -23,7 +23,7 @@ export const ourFileRouter = {
       // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
       return { uploadedBy: metadata.uploadedBy, url: file.ufsUrl };
     }),
-  
+
   // Category image uploader
   categoryImageUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
@@ -37,7 +37,7 @@ export const ourFileRouter = {
 
       return { uploadedBy: metadata.uploadedBy, url: file.ufsUrl };
     }),
-  
+
   // Brand logo uploader
   brandLogoUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
@@ -50,6 +50,20 @@ export const ourFileRouter = {
       console.log("Brand logo file url", file.ufsUrl);
 
       return { uploadedBy: metadata.uploadedBy, url: file.ufsUrl };
+    }),
+
+  heroSlideUploader: f({
+    image: { maxFileSize: "8MB", maxFileCount: 2 },
+    video: { maxFileSize: "32MB", maxFileCount: 2 }
+  })
+    .middleware(async () => {
+      // Add authentication check here if needed
+      return { uploadedBy: "dashboard-admin" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Hero slide upload complete for:", metadata.uploadedBy);
+      console.log("File URL:", file.url);
+      return { uploadedBy: metadata.uploadedBy, url: file.url };
     }),
 } satisfies FileRouter;
 

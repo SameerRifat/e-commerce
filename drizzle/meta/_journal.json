@@ -57,6 +57,13 @@
       "when": 1759127524360,
       "tag": "0007_silent_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1759900433935,
+      "tag": "0008_breezy_calypso",
+      "breakpoints": true
     }
   ]
 }

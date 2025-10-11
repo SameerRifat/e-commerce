@@ -1,3 +1,4 @@
+// src/components/dashboard/attributes/colors-client-wrapper.tsx
 "use client";
 
 import React, { useState } from "react";

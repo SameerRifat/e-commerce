@@ -1,4 +1,5 @@
-import AuthForm from "@/components/AuthForm";
+// src/app/(auth)/sign-in/page.tsx
+import AuthForm from "@/components/auth/auth-form";
 import {signIn} from "@/lib/auth/actions";
 
 export default function Page() {

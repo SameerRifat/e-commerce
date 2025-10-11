@@ -17,7 +17,7 @@ export const VALIDATION_RULES = {
     sku: {
       minLength: 1,
       maxLength: 100,
-      pattern: /^[A-Z0-9-]+$/, // Alphanumeric and hyphens only
+      pattern: /^[A-Za-z0-9-]+$/,
     },
     price: {
       min: 0.01,

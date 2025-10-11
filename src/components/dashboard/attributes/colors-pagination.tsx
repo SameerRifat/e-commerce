@@ -1,3 +1,4 @@
+// src/components/dashboard/attributes/colors-pagination.tsx
 "use client";
 
 import React from "react";

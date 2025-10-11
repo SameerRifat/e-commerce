@@ -1,3 +1,5 @@
+// src/components/dashboard/products/ProductsTableWrapper.tsx
+
 "use client";
 
 import React from "react";
@@ -67,9 +69,9 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
       render: (category: DashboardProductListItem["category"]) => category?.name || "—",
     },
     {
-      key: "variants",
+      key: "price", // Changed from "variants" to "price"
       label: "Price",
-      render: (variants: DashboardProductListItem["variants"], product: DashboardProductListItem) => {
+      render: (_: any, product: DashboardProductListItem) => {
         // For simple products, show the direct price
         if (product.productType === 'simple' && product.price) {
           const salePrice = product.salePrice ? parseFloat(product.salePrice) : null;
@@ -91,8 +93,8 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
         }
         
         // For configurable products, show price range from variants
-        if (!variants.length) return "—";
-        const prices = variants.map((v) => parseFloat(v.price));
+        if (!product.variants.length) return "—";
+        const prices = product.variants.map((v) => parseFloat(v.price));
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
         
@@ -103,15 +105,15 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
       },
     },
     {
-      key: "variants",
+      key: "stock", // Changed from "variants" to "stock"
       label: "Stock",
-      render: (variants: DashboardProductListItem["variants"], product: DashboardProductListItem) => {
+      render: (_: any, product: DashboardProductListItem) => {
         let totalStock = 0;
         
         if (product.productType === 'simple' && product.inStock !== null && product.inStock !== undefined) {
           totalStock = product.inStock;
         } else {
-          totalStock = variants.reduce((sum, v) => sum + (v.inStock || 0), 0);
+          totalStock = product.variants.reduce((sum, v) => sum + (v.inStock || 0), 0);
         }
         
         return (

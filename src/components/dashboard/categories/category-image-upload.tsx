@@ -19,6 +19,8 @@ interface CategoryImageUploadProps {
   onChange: (imageUrl: string | null) => void;
   className?: string;
   disabled?: boolean;
+  isRequired?: boolean;
+  error?: string;
 }
 
 const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
@@ -26,6 +28,8 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
   onChange,
   className,
   disabled = false,
+  isRequired = false,
+  error,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -100,7 +104,9 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
   return (
     <Card className={cn("", className)}>
       <CardHeader>
-        <CardTitle>Category Image</CardTitle>
+        <CardTitle>
+          Category Image {isRequired && <span className="text-red-500">*</span>}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Image Preview */}
@@ -204,8 +210,15 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
         </div>
 
         <p className="text-xs text-gray-500">
-          Recommended: 16:9 aspect ratio, at least 400x225px, PNG or JPG format
+          {isRequired 
+            ? "Required for top-level categories. Recommended: 16:9 aspect ratio, at least 400x225px, PNG or JPG format" 
+            : "Recommended: 16:9 aspect ratio, at least 400x225px, PNG or JPG format"
+          }
         </p>
+
+        {error && (
+          <p className="text-sm font-medium text-destructive">{error}</p>
+        )}
       </CardContent>
     </Card>
   );

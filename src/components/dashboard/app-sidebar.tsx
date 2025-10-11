@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Package, Palette, Layers, Images, Command, Boxes, Sparkles, LifeBuoy, Send, Frame, PieChart, ShoppingBag} from "lucide-react"
+import { Package, Palette, Layers, Images, Command, Boxes, Sparkles, LifeBuoy, Send, Frame, PieChart, ShoppingBag, Monitor} from "lucide-react"
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem} from "@/components/ui/sidebar"
 import { NavMain } from "./nav-main"
@@ -54,6 +54,21 @@ const data = {
                 {
                     title: "Shipped",
                     url: "/dashboard/orders?status=shipped",
+                },
+            ],
+        },
+        {
+            title: "Hero Slides",
+            url: "/dashboard/hero-slides",
+            icon: Monitor,
+            items: [
+                {
+                    title: "All Slides",
+                    url: "/dashboard/hero-slides",
+                },
+                {
+                    title: "Add New Slide",
+                    url: "/dashboard/hero-slides/new",
                 },
             ],
         },

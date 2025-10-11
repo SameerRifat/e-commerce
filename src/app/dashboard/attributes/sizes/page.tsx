@@ -3,26 +3,36 @@ import React from "react";
 import { getSizes } from "@/lib/actions/size-management";
 import { getSizeCategories } from "@/lib/actions/size-category-management";
 import ToastHandler from "@/components/dashboard/attributes/toast-handler";
-import SizesPagination from "@/components/dashboard/attributes/sizes-pagination";
 import SizesClientWrapper from "@/components/dashboard/attributes/sizes-client-wrapper";
+import DashboardPagination from "@/components/dashboard/dashboard-pagination";
 
 interface SizesPageProps {
   searchParams: Promise<{
     search?: string;
     page?: string;
+    limit?: string;
     success?: string;
     categoryId?: string;
   }>;
 }
 
+// Helper function to safely get number parameter
+function getNumberParam(value: string | undefined, defaultValue: number): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
 export default async function SizesPage({ searchParams }: SizesPageProps) {
   const params = await searchParams;
+  
+  // Parse parameters with defaults
   const search = params.search || "";
-  const page = parseInt(params.page || "1");
+  const page = getNumberParam(params.page, 1);
+  const limit = getNumberParam(params.limit, 10); // 10 for production, can use 2 for testing
   const categoryId = params.categoryId;
 
   // Fetch paginated sizes and categories list
-  // Categories are only needed for the filter dropdown, not for overview
   const [
     { sizes, pagination }, 
     allCategories
@@ -30,12 +40,12 @@ export default async function SizesPage({ searchParams }: SizesPageProps) {
     getSizes({
       search,
       page,
-      limit: 10,
+      limit,
       sortBy: "sortOrder",
       sortOrder: "asc",
       categoryId,
     }),
-    getSizeCategories(), // Only fetch for dropdown, not overview
+    getSizeCategories(), // Only fetch for dropdown
   ]);
 
   return (
@@ -50,11 +60,12 @@ export default async function SizesPage({ searchParams }: SizesPageProps) {
         currentCategoryId={categoryId}
       />
 
-      {/* Server-side pagination */}
-      <SizesPagination
+      {/* Reuse DashboardPagination component */}
+      <DashboardPagination
         currentPage={pagination.page}
-        totalPages={pagination.totalPages}
-        total={pagination.total}
+        totalCount={pagination.total}
+        pageSize={limit}
+        className="mt-8"
       />
     </div>
   );

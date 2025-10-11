@@ -41,7 +41,7 @@ export interface SizeSearchParams {
   limit?: number;
   sortBy?: "name" | "slug" | "sortOrder" | "variantCount";
   sortOrder?: "asc" | "desc";
-  categoryId?: string; // Add category filtering
+  categoryId?: string;
 }
 
 export interface PaginatedSizes {
@@ -143,7 +143,10 @@ export async function getSizes(params: SizeSearchParams = {}): Promise<Paginated
       categoryId,
     } = params;
 
-    const offset = (page - 1) * limit;
+    // Ensure valid page and limit values
+    const validPage = Math.max(1, page);
+    const validLimit = Math.max(1, Math.min(limit, 100)); // Cap at 100
+    const offset = (validPage - 1) * validLimit;
 
     // Build search conditions
     const searchConditions = [];
@@ -207,14 +210,14 @@ export async function getSizes(params: SizeSearchParams = {}): Promise<Paginated
       .where(searchCondition)
       .groupBy(sizes.id, sizes.name, sizes.slug, sizes.sortOrder, sizes.categoryId, sizeCategories.name)
       .orderBy(orderDirection)
-      .limit(limit)
+      .limit(validLimit)
       .offset(offset);
 
     // Handle edge case when offset is too high (no results returned)
     let total = 0;
     if (sizesResult.length > 0) {
       total = sizesResult[0].totalCount;
-    } else if (page > 1) {
+    } else if (validPage > 1) {
       // If no results but we're not on page 1, get total count separately
       const countResult = await db
         .select({
@@ -229,7 +232,7 @@ export async function getSizes(params: SizeSearchParams = {}): Promise<Paginated
       total = countResult.length;
     }
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / validLimit);
 
     return {
       sizes: sizesResult.map(({ totalCount: _, ...size }) => ({
@@ -238,8 +241,8 @@ export async function getSizes(params: SizeSearchParams = {}): Promise<Paginated
         categoryName: size.categoryName || undefined,
       })),
       pagination: {
-        page,
-        limit,
+        page: validPage,
+        limit: validLimit,
         total,
         totalPages,
       },

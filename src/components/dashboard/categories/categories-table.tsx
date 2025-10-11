@@ -229,7 +229,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({ categories }) => {
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={!!isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive tex-white-destructive-foreground"
             >
               {isDeleting ? (
                 <>

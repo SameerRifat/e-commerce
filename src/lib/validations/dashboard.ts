@@ -48,14 +48,27 @@ export const brandFormSchema = z.object({
 
 export type BrandFormData = z.infer<typeof brandFormSchema>;
 
-// Category validation schemas - UPDATED: Added imageUrl field
+// Category validation schemas - UPDATED: Added conditional imageUrl validation
 export const categoryFormSchema = z.object({
   name: z.string().min(1, "Category name is required").max(100, "Category name is too long"),
   slug: z.string().min(1, "Slug is required").max(100, "Slug is too long")
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase letters, numbers, and hyphens only"),
   parentId: z.string().uuid("Invalid parent category").optional().nullable(),
-  imageUrl: z.string().url("Invalid URL").optional().nullable(), // New field for category images
-});
+  imageUrl: z.string().url("Invalid URL").optional().nullable(),
+}).refine(
+  (data) => {
+    // If parentId is null (top-level category), imageUrl is required
+    if (data.parentId === null || data.parentId === undefined) {
+      return data.imageUrl !== null && data.imageUrl !== undefined && data.imageUrl.length > 0;
+    }
+    // For subcategories, imageUrl is optional
+    return true;
+  },
+  {
+    message: "Category image is required for top-level categories",
+    path: ["imageUrl"], // This ensures the error shows on the imageUrl field
+  }
+);
 
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;
 

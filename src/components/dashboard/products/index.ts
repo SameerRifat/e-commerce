@@ -15,5 +15,4 @@ export { default as StepNavigation } from './components/StepNavigation';
 
 // Dashboard-specific components
 export { default as DashboardFilters } from './DashboardFilters';
-export { default as DashboardPagination } from './DashboardPagination';
 export { default as ProductsTableWrapper } from './ProductsTableWrapper';

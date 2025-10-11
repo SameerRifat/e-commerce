@@ -1,7 +1,8 @@
+// src/components/dashboard/products/DashboardPagination.tsx
 "use client";
 
 import React from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import {
   Pagination,
   PaginationContent,
@@ -11,8 +12,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { withUpdatedParams } from "@/lib/utils/query";
-import type { DashboardPaginationProps } from "@/types/dashboard";
+
+interface DashboardPaginationProps {
+  currentPage: number;
+  totalCount: number;
+  pageSize: number;
+  className?: string;
+}
 
 const DashboardPagination: React.FC<DashboardPaginationProps> = ({
   currentPage,
@@ -20,42 +26,42 @@ const DashboardPagination: React.FC<DashboardPaginationProps> = ({
   pageSize,
   className,
 }) => {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentSearch = searchParams.toString();
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const navigateToPage = (page: number) => {
-    if (page < 1 || page > totalPages || page === currentPage) return;
+  const createPageUrl = (page: number) => {
+    const params = new URLSearchParams(searchParams);
     
-    const newUrl = withUpdatedParams(pathname, currentSearch, { page: page === 1 ? undefined : page });
-    router.push(newUrl, { scroll: false });
+    if (page === 1) {
+      params.delete('page');
+    } else {
+      params.set('page', String(page));
+    }
+    
+    const queryString = params.toString();
+    return queryString ? `${pathname}?${queryString}` : pathname;
   };
 
   if (totalPages <= 1) return null;
 
   // Calculate page numbers to show
   const getPageNumbers = () => {
-    const delta = 2; // Number of pages to show on each side of current page
+    const delta = 2;
     const range = [];
     const rangeWithDots = [];
 
-    // Always show first page
     range.push(1);
 
-    // Calculate the range around current page
     for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
       range.push(i);
     }
 
-    // Always show last page if more than 1 page
     if (totalPages > 1) {
       range.push(totalPages);
     }
 
-    // Add dots where there are gaps
     let prev = 0;
     for (const i of range) {
       if (prev + 1 < i) {
@@ -79,8 +85,10 @@ const DashboardPagination: React.FC<DashboardPaginationProps> = ({
           {/* Previous Button */}
           <PaginationItem>
             <PaginationPrevious
-              onClick={() => navigateToPage(currentPage - 1)}
-              className={!hasPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              href={hasPrevious ? createPageUrl(currentPage - 1) : "#"}
+              aria-disabled={!hasPrevious}
+              className={!hasPrevious ? "pointer-events-none opacity-50" : undefined}
+              scroll={false}
             />
           </PaginationItem>
 
@@ -91,9 +99,9 @@ const DashboardPagination: React.FC<DashboardPaginationProps> = ({
                 <PaginationEllipsis />
               ) : (
                 <PaginationLink
-                  onClick={() => navigateToPage(pageNum as number)}
+                  href={createPageUrl(pageNum as number)}
                   isActive={pageNum === currentPage}
-                  className="cursor-pointer"
+                  scroll={false}
                 >
                   {pageNum}
                 </PaginationLink>
@@ -104,8 +112,10 @@ const DashboardPagination: React.FC<DashboardPaginationProps> = ({
           {/* Next Button */}
           <PaginationItem>
             <PaginationNext
-              onClick={() => navigateToPage(currentPage + 1)}
-              className={!hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              href={hasNext ? createPageUrl(currentPage + 1) : "#"}
+              aria-disabled={!hasNext}
+              className={!hasNext ? "pointer-events-none opacity-50" : undefined}
+              scroll={false}
             />
           </PaginationItem>
         </PaginationContent>
