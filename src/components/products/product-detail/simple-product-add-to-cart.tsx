@@ -1,9 +1,12 @@
-// src/components/SimpleProductAddToCart.tsx
+// src/components/products/product-detail/simple-product-add-to-cart.tsx
 'use client';
 
 import { useState } from 'react';
-import { ShoppingBag, Heart, AlertCircle, Check } from 'lucide-react';
+import { ShoppingBag, AlertCircle, Check, Package, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
 
@@ -18,6 +21,12 @@ interface SimpleProductAddToCartProps {
     salePrice?: string | null;
     sku?: string | null;
     inStock?: number | null;
+    weight?: number | null;
+    dimensions?: {
+      length?: number;
+      width?: number;
+      height?: number;
+    } | null;
   };
 }
 
@@ -30,7 +39,6 @@ export default function SimpleProductAddToCart({
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Use product data directly for simple products
   const selectedProduct = {
     id: productId,
     sku: product.sku || `simple-${productId}`,
@@ -39,7 +47,6 @@ export default function SimpleProductAddToCart({
     inStock: product.inStock ?? 0,
   };
 
-  // Prepare optimistic product details
   const getOptimisticProductDetails = () => {
     if (!selectedProduct) return undefined;
 
@@ -47,14 +54,13 @@ export default function SimpleProductAddToCart({
       name: productName,
       price: parseFloat(selectedProduct.price),
       salePrice: selectedProduct.salePrice ? parseFloat(selectedProduct.salePrice) : undefined,
-      image: undefined, // Simple products don't have variant-specific images
+      image: undefined,
       sku: selectedProduct.sku,
       inStock: selectedProduct.inStock,
     };
   };
 
   const handleAddToCart = async () => {
-    // Clear any previous errors
     if (error) clearError();
 
     if (!selectedProduct) {
@@ -72,10 +78,9 @@ export default function SimpleProductAddToCart({
       return;
     }
 
-    // Check if this product is already being added
-    const isAlreadyAdding = items.some(item => 
-      item.productId === selectedProduct.id && 
-      item.isSimpleProduct && 
+    const isAlreadyAdding = items.some(item =>
+      item.productId === selectedProduct.id &&
+      item.isSimpleProduct &&
       item.pendingOperation === 'add'
     );
 
@@ -86,10 +91,8 @@ export default function SimpleProductAddToCart({
 
     setIsAdding(true);
 
-    // Prepare optimistic update data
     const optimisticDetails = getOptimisticProductDetails();
 
-    // Show immediate success feedback
     toast.success(
       <div className="flex items-center gap-2">
         <Check className="h-4 w-4" />
@@ -98,11 +101,9 @@ export default function SimpleProductAddToCart({
     );
 
     try {
-      // Add item with optimistic update - use productId for simple products
       const success = await addItem(selectedProduct.id, null, true, quantity, optimisticDetails);
 
       if (!success) {
-        // Error handling is now managed by the store and will show rollback
         toast.error('Failed to add item to cart. Your cart has been restored.');
       }
     } finally {
@@ -126,21 +127,25 @@ export default function SimpleProductAddToCart({
 
   return (
     <div className="space-y-6">
-      {/* Error Display */}
+      {/* Error Display with Shadcn Alert */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          <span className="text-sm">{error}</span>
-          <button 
-            onClick={clearError}
-            className="ml-auto text-red-600 hover:text-red-800"
-          >
-            ✕
-          </button>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearError}
+              className="h-auto p-0 hover:bg-transparent"
+            >
+              ✕
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
-      {/* Price Display */}
+      {/* Price Display with Shadcn Badge */}
       {selectedProduct && (
         <div className="flex items-center gap-3">
           <p className="text-3xl font-bold text-gray-900">
@@ -152,35 +157,35 @@ export default function SimpleProductAddToCart({
                 {formatPrice(compareAtPrice)}
               </span>
               {discount && (
-                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm font-medium">
+                <Badge className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium">
                   {discount}% off
-                </span>
+                </Badge>
               )}
             </>
           )}
         </div>
       )}
 
-      {/* Stock Status */}
+      {/* Stock Status with Shadcn Badge */}
       {selectedProduct && (
         <div className="flex items-center gap-2">
           {selectedProduct.inStock > 0 ? (
             selectedProduct.inStock <= 5 ? (
-              <div className="flex items-center gap-2 text-orange-600">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">Only {selectedProduct.inStock} left in stock</span>
-              </div>
+              <Badge variant="outline" className="text-orange-600 border-orange-600">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                Only {selectedProduct.inStock} left in stock
+              </Badge>
             ) : (
-              <div className="flex items-center gap-2 text-green-600">
-                <Check className="w-4 h-4" />
-                <span className="text-sm">In stock</span>
-              </div>
+              <Badge variant="outline" className="text-green-600 border-green-600">
+                <Check className="w-4 h-4 mr-1" />
+                In stock
+              </Badge>
             )
           ) : (
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">Out of stock</span>
-            </div>
+            <Badge variant="destructive">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              Out of stock
+            </Badge>
           )}
         </div>
       )}
@@ -190,62 +195,88 @@ export default function SimpleProductAddToCart({
         <div className="space-y-3">
           <h3 className="font-medium text-gray-900">Quantity</h3>
           <div className="flex items-center border rounded-md w-fit">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               disabled={quantity <= 1}
-              className="px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 rounded-none"
             >
               −
-            </button>
+            </Button>
             <span className="px-4 py-2 border-x min-w-[3rem] text-center">{quantity}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setQuantity(Math.min(selectedProduct.inStock, quantity + 1))}
               disabled={quantity >= selectedProduct.inStock}
-              className="px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 rounded-none"
             >
               +
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Add to Cart Buttons */}
+      {/* Add to Cart Button */}
       <div className="flex flex-col gap-3">
         <Button
           onClick={handleAddToCart}
           disabled={!selectedProduct || selectedProduct.inStock === 0 || isAdding}
-          className="flex items-center justify-center gap-2 h-12 text-base font-medium"
+          className="h-12 text-base font-medium"
           size="lg"
         >
           {isAdding ? (
             <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
               Adding to Cart...
             </>
           ) : (
             <>
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-5 w-5 mr-2" />
               Add to Cart
             </>
           )}
         </Button>
-
-        <Button
-          variant="outline"
-          className="flex items-center justify-center gap-2 h-12 text-base font-medium"
-          size="lg"
-        >
-          <Heart className="h-5 w-5" />
-          Add to Wishlist
-        </Button>
       </div>
 
-      {/* Product Details */}
-      {selectedProduct && (
-        <div className="pt-4 border-t text-sm text-gray-600 space-y-1">
-          <p><span className="font-medium">SKU:</span> {selectedProduct.sku}</p>
-          <p><span className="font-medium">Product Type:</span> Simple Product</p>
-        </div>
+      {/* Product Specifications - Useful Info Only */}
+      {(product.sku || product.weight || product.dimensions) && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <h3 className="font-medium text-gray-900">Product Information</h3>
+            <div className="text-sm text-gray-600 space-y-2">
+              {product.sku && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-500">Item Code:</span>
+                  <span className="font-medium">{product.sku}</span>
+                </div>
+              )}
+              {product.weight && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-500">Weight:</span>
+                  <span className="font-medium">{product.weight}g</span>
+                </div>
+              )}
+              {product.dimensions && (
+                product.dimensions.length ||
+                product.dimensions.width ||
+                product.dimensions.height
+              ) && (
+                  <div className="flex items-center gap-2">
+                    <Ruler className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-500">Dimensions:</span>
+                    <span className="font-medium">
+                      {product.dimensions.length || 0} × {product.dimensions.width || 0} × {product.dimensions.height || 0} cm
+                    </span>
+                  </div>
+                )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

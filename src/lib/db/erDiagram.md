@@ -14,6 +14,7 @@ erDiagram
         text email UK
         boolean email_verified
         text image
+        text role
         timestamp created_at
         timestamp updated_at
     }

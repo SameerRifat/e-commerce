@@ -1,7 +1,8 @@
 // src/app/(root)/layout.tsx
-import { Navbar, Footer } from "@/components";
-import CartSidebar from "@/components/cart/CartSidebar";
 import CartInitializer from "@/components/CartInitializer";
+import Footer from "@/components/footer";
+import Navbar from "@/components/header/navbar";
+import TopBar from "@/components/header/top-bar";
 import { getCurrentUser } from "@/lib/auth/actions";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,10 +13,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <>
       <CartInitializer />
+      <TopBar />
       <Navbar user={user} />
       {children}
       <Footer />
-      {/* <CartSidebar /> */}
     </>
   );
 }

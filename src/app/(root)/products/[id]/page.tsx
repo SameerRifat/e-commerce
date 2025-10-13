@@ -1,132 +1,42 @@
 // src/app/(root)/products/[id]/page.tsx
-import Link from "next/link";
 import { Suspense } from "react";
 import { CollapsibleSection, ProductGallery } from "@/components";
-import { Star } from "lucide-react";
-import SimpleProductAddToCart from "@/components/SimpleProductAddToCart";
-import ConfigurableProductAddToCart from "@/components/ConfigurableProductAddToCart";
+import SimpleProductAddToCart from "@/components/products/product-detail/simple-product-add-to-cart";
+import ConfigurableProductAddToCart from "@/components/products/product-detail/configurable-product-add-to-cart";
 import { VariantSelectionProvider } from "@/components/VariantSelector";
-import { getProduct, getProductReviews, getRecommendedProducts, type Review, type RecommendedProduct, type FullProduct } from "@/lib/actions/product";
-import ProductCard from "@/components/shared/product-card";
+import { getProduct, type FullProduct } from "@/lib/actions/product";
+import RichTextViewer from "@/components/dashboard/rich-text-viewer";
+import ReviewsSection from "@/components/products/product-detail/reviews-section";
+import ProductNotFoundPage from "@/components/products/product-detail/product-not-found-page";
+import ProductBreadcrumb from "@/components/products/product-detail/product-breadcrumb";
+import AlsoLikeSection from "@/components/products/product-detail/also-like-section";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 type GalleryVariant = { color: string; images: string[] };
-
-function formatPrice(price: number | null | undefined) {
-  if (price === null || price === undefined) return undefined;
-  return `$${price.toFixed(2)}`;
-}
-
-function NotFoundBlock() {
-  return (
-    <section className="mx-auto max-w-3xl rounded-xl border border-light-300 bg-light-100 p-8 text-center">
-      <h1 className="text-heading-3 text-dark-900">Product not found</h1>
-      <p className="mt-2 text-body text-dark-700">The product you’re looking for doesn’t exist or may have been removed.</p>
-      <div className="mt-6">
-        <Link
-          href="/products"
-          className="inline-block rounded-full bg-dark-900 px-6 py-3 text-body-medium text-light-100 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-dark-500]"
-        >
-          Browse Products
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-async function ReviewsSection({ productId }: { productId: string }) {
-  const reviews: Review[] = await getProductReviews(productId);
-  const count = reviews.length;
-  const avg =
-    count > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / count) : 0;
-
-  return (
-    <CollapsibleSection
-      title={`Reviews (${count})`}
-      rightMeta={
-        <span className="flex items-center gap-1 text-dark-900">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} className={`h-4 w-4 ${i <= Math.round(avg) ? "fill-[--color-dark-900]" : ""}`} />
-          ))}
-        </span>
-      }
-    >
-      {reviews.length === 0 ? (
-        <p>No reviews yet.</p>
-      ) : (
-        <ul className="space-y-4">
-          {reviews.slice(0, 10).map((r) => (
-            <li key={r.id} className="rounded-lg border border-light-300 p-4">
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-body-medium text-dark-900">{r.author}</p>
-                <span className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className={`h-4 w-4 ${i <= r.rating ? "fill-[--color-dark-900]" : ""}`} />
-                  ))}
-                </span>
-              </div>
-              {r.title && <p className="text-body-medium text-dark-900">{r.title}</p>}
-              {r.content && <p className="mt-1 line-clamp-[8] text-body text-dark-700">{r.content}</p>}
-              <p className="mt-2 text-caption text-dark-700">{new Date(r.createdAt).toLocaleDateString()}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </CollapsibleSection>
-  );
-}
-
-async function AlsoLikeSection({ productId }: { productId: string }) {
-  const recs: RecommendedProduct[] = await getRecommendedProducts(productId);
-  if (!recs.length) return null;
-  return (
-    <section className="mt-16">
-      <h2 className="mb-6 text-heading-3 text-dark-900">You Might Also Like</h2>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {recs.map((p) => (
-          <ProductCard
-            key={p.id}
-            title={p.title}
-            imageSrc={p.imageUrl}
-            price={p.price ?? undefined}
-            href={`/products/${p.id}`}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const data = await getProduct(id);
 
   if (!data) {
-    return (
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <nav className="py-4 text-caption text-dark-700">
-          <Link href="/" className="hover:underline">Home</Link> / <Link href="/products" className="hover:underline">Products</Link> /{" "}
-          <span className="text-dark-900">Not found</span>
-        </nav>
-        <NotFoundBlock />
-      </main>
-    );
+    return <ProductNotFoundPage />;
   }
-
 
   const { product, variants, images } = data;
   const isSimpleProduct = product.productType === 'simple';
   const isConfigurable = product.productType === 'configurable';
 
-  // console.log('[ProductDetailPage] data:', JSON.stringify(data, null, 2));
+  console.log('[ProductDetailPage] data:', JSON.stringify(data, null, 2));
 
   // Handle gallery variants based on product type
   let galleryVariants: GalleryVariant[] = [];
-  
+
   if (isConfigurable && variants.length > 0) {
-    // For configurable products, create gallery variants from product variants
-    // Group variants by color first, then by size if needed
     const variantGroups = new Map<string, typeof variants>();
-    
+
     variants.forEach((variant) => {
       const groupKey = variant.color?.name || 'Default';
       if (!variantGroups.has(groupKey)) {
@@ -135,7 +45,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       variantGroups.get(groupKey)!.push(variant);
     });
 
-    // Pre-compute product-level images (always show these too)
     const productLevelImages = images
       .filter((img) => img.variantId === null)
       .sort((a, b) => {
@@ -146,9 +55,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       .map((img) => img.url)
       .filter(Boolean);
 
-    // Create gallery variants for each color group
     galleryVariants = Array.from(variantGroups.entries()).map(([colorName, colorVariants]) => {
-      // Get all images for variants of this color
       const variantImages = images
         .filter((img) => colorVariants.some(v => v.id === img.variantId))
         .sort((a, b) => {
@@ -158,7 +65,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         })
         .map((img) => img.url);
 
-      // Merge product-level and variant images (de-duplicate, keep order)
       const merged = Array.from(new Set([...(productLevelImages || []), ...variantImages]));
 
       return {
@@ -167,7 +73,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       };
     }).filter((gv) => gv.images.length > 0);
   } else if (isSimpleProduct) {
-    // For simple products, create a single gallery variant with all images
     const productImages = images
       .sort((a, b) => {
         if (a.isPrimary && !b.isPrimary) return -1;
@@ -184,48 +89,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     }
   }
 
-  // Handle pricing based on product type
-  let basePrice: number | null = null;
-  let salePrice: number | null = null;
-  let displayPrice: number | null = null;
-  let compareAt: number | null = null;
-  let discount: number | null = null;
-
-  if (isSimpleProduct) {
-    // For simple products, use product-level pricing
-    basePrice = product.price ? Number(product.price) : null;
-    salePrice = product.salePrice ? Number(product.salePrice) : null;
-    
-    displayPrice = salePrice !== null && !Number.isNaN(salePrice) ? salePrice : basePrice;
-    compareAt = salePrice !== null && !Number.isNaN(salePrice) ? basePrice : null;
-  } else if (isConfigurable && variants.length > 0) {
-    // For configurable products, use default variant or first variant pricing
-    const defaultVariant = variants.find((v) => v.id === product.defaultVariantId) || variants[0];
-    
-    if (defaultVariant) {
-      basePrice = Number(defaultVariant.price);
-      salePrice = defaultVariant.salePrice ? Number(defaultVariant.salePrice) : null;
-      
-      displayPrice = salePrice !== null && !Number.isNaN(salePrice) ? salePrice : basePrice;
-      compareAt = salePrice !== null && !Number.isNaN(salePrice) ? basePrice : null;
-    }
-  }
-
-  // Calculate discount
-  if (compareAt && displayPrice && compareAt > displayPrice) {
-    discount = Math.round(((compareAt - displayPrice) / compareAt) * 100);
-  }
-
-  const subtitle = product.gender?.label ? `${product.gender.label} Shoes` : undefined;
-
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <nav className="py-4 text-caption text-dark-700">
-        <Link href="/" className="hover:underline">Home</Link> / <Link href="/products" className="hover:underline">Products</Link> /{" "}
-        <span className="text-dark-900">{product.name}</span>
-      </nav>
+    <main className="custom_container">
+      {/* Breadcrumb */}
+      <ProductBreadcrumb productName={product.name} />
 
-      <section className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_480px]">
+      <section className="grid grid-cols-1 gap-10 2xl:gap-20 lg:grid-cols-2">
         {isConfigurable ? (
           <VariantSelectionProvider
             productId={product.id}
@@ -239,48 +108,63 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             )}
 
             <div className="flex flex-col gap-6">
-              <header className="flex flex-col gap-2">
-                <h1 className="text-heading-2 text-dark-900">{product.name}</h1>
-                {subtitle && <p className="text-body text-dark-700">{subtitle}</p>}
+              <header className="flex flex-col gap-3">
+                {/* Product Title */}
+                <h1 className="text-2xl md:text-3xl font-bold text-dark-900">{product.name}</h1>
+
+                {/* Metadata Row: Brand, Category, Gender */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {product.brand && (
+                    <Link href={`/brands/${product.brand.slug}`}>
+                      <Badge
+                        variant="secondary"
+                        className="text-sm cursor-pointer hover:bg-gray-300 transition-colors"
+                      >
+                        {product.brand.name}
+                      </Badge>
+                    </Link>
+                  )}
+                  {product.category && (
+                    <Link href={`/categories/${product.category.slug}`}>
+                      <Badge
+                        variant="outline"
+                        className="text-sm cursor-pointer hover:border-gray-500 transition-colors"
+                      >
+                        {product.category.name}
+                      </Badge>
+                    </Link>
+                  )}
+                  {product.gender && (
+                    <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                      {product.gender.label}
+                    </span>
+                  )}
+                </div>
               </header>
 
-              <div className="flex items-center gap-3">
-                <p className="text-lead text-dark-900">{formatPrice(displayPrice)}</p>
-                {compareAt && (
-                  <>
-                    <span className="text-body text-dark-700 line-through">{formatPrice(compareAt)}</span>
-                    {discount !== null && (
-                      <span className="rounded-full border border-light-300 px-2 py-1 text-caption text-[--color-green]">
-                        {discount}% off
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <ConfigurableProductAddToCart 
+              <ConfigurableProductAddToCart
                 productId={product.id}
                 productName={product.name}
                 variants={variants as FullProduct['variants']}
               />
 
-              <CollapsibleSection title="Product Details" defaultOpen>
-                <p>{product.description}</p>
-              </CollapsibleSection>
+              {/* <Separator /> */}
 
-              <CollapsibleSection title="Shipping & Returns">
-                <p>Free standard shipping and free 30-day returns for Nike Members.</p>
-              </CollapsibleSection>
+              <div>
+                <CollapsibleSection title="Product Details" value="details" defaultOpen>
+                  <RichTextViewer content={product.description} />
+                </CollapsibleSection>
 
-              <Suspense
-                fallback={
-                  <CollapsibleSection title="Reviews">
-                    <p className="text-body text-dark-700">Loading reviews…</p>
-                  </CollapsibleSection>
-                }
-              >
-                <ReviewsSection productId={product.id} />
-              </Suspense>
+                <Suspense
+                  fallback={
+                    <CollapsibleSection title="Reviews" value="reviews-loading">
+                      <p className="text-body text-dark-700">Loading reviews…</p>
+                    </CollapsibleSection>
+                  }
+                >
+                  <ReviewsSection productId={product.id} />
+                </Suspense>
+              </div>
             </div>
           </VariantSelectionProvider>
         ) : (
@@ -290,26 +174,50 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             )}
 
             <div className="flex flex-col gap-6">
-              <header className="flex flex-col gap-2">
-                <h1 className="text-heading-2 text-dark-900">{product.name}</h1>
-                {subtitle && <p className="text-body text-dark-700">{subtitle}</p>}
+              <header className="flex flex-col gap-3">
+                {/* Product Title */}
+                <h1 className="text-2xl md:text-3xl font-bold text-dark-900">{product.name}</h1>
+
+                {/* Metadata Row: Brand, Category, Gender */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {product.brand && (
+                    <Link href={`/brands/${product.brand.slug}`}>
+                      <Badge
+                        variant="secondary"
+                        className="text-sm cursor-pointer hover:bg-gray-300 transition-colors"
+                      >
+                        {product.brand.name}
+                      </Badge>
+                    </Link>
+                  )}
+                  {product.category && (
+                    <Link href={`/categories/${product.category.slug}`}>
+                      <Badge
+                        variant="outline"
+                        className="text-sm cursor-pointer hover:border-gray-500 transition-colors"
+                      >
+                        {product.category.name}
+                      </Badge>
+                    </Link>
+                  )}
+                  {product.gender && (
+                    <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                      {product.gender.label}
+                    </span>
+                  )}
+                </div>
+
+                {/* Optional: Subtitle for context */}
+                {(product.gender?.label || product.category?.name) && (
+                  <p className="text-sm text-gray-500">
+                    {product.gender?.label && product.category?.name
+                      ? `${product.gender.label} ${product.category.name}`
+                      : product.gender?.label || product.category?.name}
+                  </p>
+                )}
               </header>
 
-              <div className="flex items-center gap-3">
-                <p className="text-lead text-dark-900">{formatPrice(displayPrice)}</p>
-                {compareAt && (
-                  <>
-                    <span className="text-body text-dark-700 line-through">{formatPrice(compareAt)}</span>
-                    {discount !== null && (
-                      <span className="rounded-full border border-light-300 px-2 py-1 text-caption text-[--color-green]">
-                        {discount}% off
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <SimpleProductAddToCart 
+              <SimpleProductAddToCart
                 productId={product.id}
                 productName={product.name}
                 product={{
@@ -320,20 +228,24 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   salePrice: product.salePrice,
                   sku: product.sku,
                   inStock: product.inStock,
+                  weight: product.weight,
+                  dimensions: product.dimensions,
                 }}
               />
 
-              <CollapsibleSection title="Product Details" defaultOpen>
-                <p>{product.description}</p>
+              <Separator />
+
+              <CollapsibleSection title="Product Details" value="details" defaultOpen>
+                <RichTextViewer content={product.description} />
               </CollapsibleSection>
 
-              <CollapsibleSection title="Shipping & Returns">
+              <CollapsibleSection title="Shipping & Returns" value="shipping">
                 <p>Free standard shipping and free 30-day returns for Nike Members.</p>
               </CollapsibleSection>
 
               <Suspense
                 fallback={
-                  <CollapsibleSection title="Reviews">
+                  <CollapsibleSection title="Reviews" value="reviews-loading">
                     <p className="text-body text-dark-700">Loading reviews…</p>
                   </CollapsibleSection>
                 }
@@ -345,13 +257,14 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         )}
       </section>
 
+      {/* Recommendations Section */}
       <Suspense
         fallback={
           <section className="mt-16">
             <h2 className="mb-6 text-heading-3 text-dark-900">You Might Also Like</h2>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-64 animate-pulse rounded-xl bg-light-200" />
+                <Skeleton key={i} className="h-64 rounded-xl" />
               ))}
             </div>
           </section>

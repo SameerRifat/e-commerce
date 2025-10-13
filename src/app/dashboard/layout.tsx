@@ -14,8 +14,19 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { getCurrentUser } from "@/lib/auth/actions";
+import { redirect } from "next/navigation";
 
-export default function Page({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/sign-in?redirectTo=/dashboard");
+  }
+
+  if (user.role !== "admin") {
+    redirect("/");
+  }
   return (
     <SidebarProvider>
       <AppSidebar />

@@ -52,6 +52,7 @@ import { toast } from 'sonner';
 import { DashboardOrder } from '@/lib/actions/dashboard/orders';
 import { updateDashboardOrderStatus, bulkUpdateOrderStatus, deleteOrder } from '@/lib/actions/dashboard/orders';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/utils/order-helpers';
+import { formatDate } from '@/lib/utils';
 
 interface OrdersTableProps {
     orders: DashboardOrder[];
@@ -71,16 +72,6 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
 
     const formatCurrency = (amount: number) => {
         return `Rs.${amount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
-    };
-
-    const formatDate = (date: Date) => {
-        return new Intl.DateTimeFormat('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(new Date(date));
     };
 
     const getStatusIcon = (status: string) => {

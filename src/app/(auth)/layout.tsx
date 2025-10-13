@@ -1,7 +1,21 @@
 // src/app/(auth)/layout.tsx
 import Image from "next/image";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/actions";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  // Check if user is already logged in
+  const user = await getCurrentUser();
+
+  if (user) {
+    // Redirect logged-in users to appropriate page
+    if (user.role === "admin") {
+      redirect("/dashboard");
+    } else {
+      redirect("/");
+    }
+  }
+
   return (
     <main className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left Section - Brand Experience */}
@@ -10,19 +24,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#E47F1A]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#E47F1A]/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-        
+
         {/* Subtle Grid Pattern Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-        
+
         {/* Content Layer */}
         <div className="relative z-10 flex flex-col justify-between h-full">
           {/* Logo */}
           <div className="flex items-center">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-[#E47F1A] to-amber-600 inline-flex items-center justify-center shadow-2xl shadow-[#E47F1A]/50 ring-1 ring-white/10">
-              <Image 
-                src="/logo.svg" 
-                alt="Brand Logo" 
-                width={28} 
+              <Image
+                src="/logo.svg"
+                alt="Brand Logo"
+                width={28}
                 height={28}
                 className="filter brightness-0 invert"
               />
@@ -36,16 +50,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 ✨ Beauty Redefined
               </span>
             </div>
-            
+
             <h2 className="text-6xl font-bold leading-tight text-white">
               Discover Your
               <span className="block mt-2 bg-gradient-to-r from-[#E47F1A] via-amber-500 to-[#E47F1A] bg-clip-text text-transparent">
                 Natural Glow
               </span>
             </h2>
-            
+
             <p className="text-xl text-slate-300 leading-relaxed max-w-md">
-              Join thousands of beauty enthusiasts who trust us for premium skincare, 
+              Join thousands of beauty enthusiasts who trust us for premium skincare,
               cosmetics, and personalized beauty solutions.
             </p>
 
@@ -91,40 +105,3 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     </main>
   );
 }
-
-
-
-// // src/app/(auth)/layout.tsx
-// import Image from "next/image";
-
-// export default function AuthLayout({ children }: { children: React.ReactNode }) {
-//   return (
-//     <main className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-//       <section className="hidden lg:flex flex-col justify-between p-10">
-//         <div className="flex items-center">
-//           <div className="h-8 w-8 rounded-md bg-orange inline-flex items-center justify-center">
-//             <Image src="/logo.svg" alt="Nike" width={20} height={20} />
-//           </div>
-//         </div>
-
-//         <div className="space-y-4">
-//           <h2 className="text-heading-2">Just Do It</h2>
-//           <p className="max-w-md text-lead text-light-300">
-//             Join millions of athletes and fitness enthusiasts who trust Nike for their performance needs.
-//           </p>
-//           <div className="flex gap-2" aria-hidden="true">
-//             <span className="h-2 w-2 rounded-full bg-light-100/90" />
-//             <span className="h-2 w-2 rounded-full bg-light-100/50" />
-//             <span className="h-2 w-2 rounded-full bg-light-100/50" />
-//           </div>
-//         </div>
-
-//         <p className="text-footnote text-light-400">© 2025 Nike. All rights reserved.</p>
-//       </section>
-
-//       <section className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-//         <div className="w-full max-w-md">{children}</div>
-//       </section>
-//     </main>
-//   );
-// }

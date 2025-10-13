@@ -1,3 +1,4 @@
+// src/components/products/filter-badges.tsx
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";

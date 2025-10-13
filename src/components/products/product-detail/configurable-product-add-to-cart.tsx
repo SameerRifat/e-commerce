@@ -2,25 +2,25 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingBag, Heart, AlertCircle, Check } from 'lucide-react';
+import { ShoppingBag, AlertCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
-import { useVariantSelection } from './VariantSelector';
-
-// Import the type from the server action to ensure consistency
+import { useVariantSelection } from '../../VariantSelector';
 import type { FullProduct } from '@/lib/actions/product';
 
 type Variant = FullProduct['variants'][number];
 
 interface ConfigurableProductAddToCartProps {
-  productId: string; // Add this back - we need it!
+  productId: string;
   productName: string;
   variants: Variant[];
 }
 
 export default function ConfigurableProductAddToCart({
-  productId, // Now we use this
+  productId,
   productName,
   variants,
 }: ConfigurableProductAddToCartProps) {
@@ -29,30 +29,12 @@ export default function ConfigurableProductAddToCart({
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Get the selected variant from context
   const selectedVariant = variantSelection.selectedVariant;
-
-  // Get available options from variant selection context
   const availableColors = variantSelection.availableColors;
   const availableSizes = variantSelection.availableSizes;
-  
   const selectedColorId = variantSelection.selectedColorId;
   const selectedSizeId = variantSelection.selectedSizeId;
 
-  // Get available sizes for selected color
-  const availableSizesForColor = variants
-    .filter(v => v.color?.id === selectedColorId)
-    .map(v => v.size)
-    .filter((size, index, self) => size && self.findIndex(s => s?.id === size.id) === index)
-    .sort((a, b) => (a?.sortOrder || 0) - (b?.sortOrder || 0));
-
-  // Get available colors for selected size
-  const availableColorsForSize = variants
-    .filter(v => v.size?.id === selectedSizeId)
-    .map(v => v.color)
-    .filter((color, index, self) => color && self.findIndex(c => c?.id === color.id) === index);
-
-  // Prepare optimistic product details
   const getOptimisticProductDetails = () => {
     if (!selectedVariant) return undefined;
 
@@ -60,7 +42,7 @@ export default function ConfigurableProductAddToCart({
       name: productName,
       price: parseFloat(selectedVariant.price),
       salePrice: selectedVariant.salePrice ? parseFloat(selectedVariant.salePrice) : undefined,
-      image: undefined, // Images handled at product level
+      image: undefined,
       color: {
         name: selectedVariant.color?.name || 'Unknown',
         hexCode: selectedVariant.color?.hexCode || '#000000',
@@ -74,7 +56,6 @@ export default function ConfigurableProductAddToCart({
   };
 
   const handleAddToCart = async () => {
-    // Clear any previous errors
     if (error) clearError();
 
     if (!selectedVariant) {
@@ -92,10 +73,9 @@ export default function ConfigurableProductAddToCart({
       return;
     }
 
-    // Check if this variant is already being added
-    const isAlreadyAdding = items.some(item => 
-      item.productVariantId === selectedVariant.id && 
-      !item.isSimpleProduct && 
+    const isAlreadyAdding = items.some(item =>
+      item.productVariantId === selectedVariant.id &&
+      !item.isSimpleProduct &&
       item.pendingOperation === 'add'
     );
 
@@ -106,10 +86,8 @@ export default function ConfigurableProductAddToCart({
 
     setIsAdding(true);
 
-    // Prepare optimistic update data
     const optimisticDetails = getOptimisticProductDetails();
 
-    // Show immediate success feedback
     toast.success(
       <div className="flex items-center gap-2">
         <Check className="h-4 w-4" />
@@ -118,12 +96,9 @@ export default function ConfigurableProductAddToCart({
     );
 
     try {
-      // FIX: Pass productId for configurable products too!
-      // This ensures product_id is populated in both cart_items and order_items tables
       const success = await addItem(productId, selectedVariant.id, false, quantity, optimisticDetails);
 
       if (!success) {
-        // Error handling is now managed by the store and will show rollback
         toast.error('Failed to add item to cart. Your cart has been restored.');
       }
     } finally {
@@ -147,21 +122,25 @@ export default function ConfigurableProductAddToCart({
 
   return (
     <div className="space-y-6">
-      {/* Error Display */}
+      {/* Error Display with Shadcn Alert */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          <span className="text-sm">{error}</span>
-          <button 
-            onClick={clearError}
-            className="ml-auto text-red-600 hover:text-red-800"
-          >
-            ✕
-          </button>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearError}
+              className="h-auto p-0 hover:bg-transparent"
+            >
+              ✕
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
-      {/* Price Display */}
+      {/* Price Display with Shadcn Badge */}
       {selectedVariant && (
         <div className="flex items-center gap-3">
           <p className="text-3xl font-bold text-gray-900">
@@ -173,9 +152,9 @@ export default function ConfigurableProductAddToCart({
                 {formatPrice(compareAtPrice)}
               </span>
               {discount && (
-                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm font-medium">
+                <Badge className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium">
                   {discount}% off
-                </span>
+                </Badge>
               )}
             </>
           )}
@@ -190,16 +169,15 @@ export default function ConfigurableProductAddToCart({
           </h3>
           <div className="flex flex-wrap gap-3">
             {availableColors.map((color) => {
-              // Enable selecting any color; the provider will auto-adjust size if incompatible
               const isSelected = selectedColorId === color.id;
 
               return (
-                <button
+                <Button
                   key={color.id}
-                  onClick={() => {
-                    variantSelection.setSelectedColor(color.id);
-                  }}
-                  className={`relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${isSelected
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => variantSelection.setSelectedColor(color.id)}
+                  className={`relative w-12 h-12 rounded-full border-2 p-0 ${isSelected
                       ? 'border-gray-900 shadow-md'
                       : 'border-gray-300 hover:border-gray-400'
                     }`}
@@ -214,7 +192,7 @@ export default function ConfigurableProductAddToCart({
                       <Check className="w-2.5 h-2.5 text-white" />
                     </div>
                   )}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -227,50 +205,45 @@ export default function ConfigurableProductAddToCart({
           <h3 className="font-medium text-gray-900">
             Size: {availableSizes.find(s => s.id === selectedSizeId)?.name || 'Select'}
           </h3>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 2xl:grid-cols-5 gap-3">
             {availableSizes.map((size) => {
-              // Enable selecting any size; the provider will auto-adjust color if incompatible
               const isSelected = selectedSizeId === size.id;
 
               return (
-                <button
+                <Button
                   key={size.id}
-                  onClick={() => {
-                    variantSelection.setSelectedSize(size.id);
-                  }}
-                  className={`py-3 px-4 border rounded-md text-sm font-medium transition-all ${isSelected
-                      ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-300 hover:border-gray-400 bg-white text-gray-900'
-                    }`}
+                  variant={isSelected ? "default" : "outline"}
+                  onClick={() => variantSelection.setSelectedSize(size.id)}
+                  className="text-sm font-medium"
                 >
                   {size.name}
-                </button>
+                </Button>
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Stock Status */}
+      {/* Stock Status with Shadcn Badge */}
       {selectedVariant && (
         <div className="flex items-center gap-2">
           {selectedVariant.inStock > 0 ? (
             selectedVariant.inStock <= 5 ? (
-              <div className="flex items-center gap-2 text-orange-600">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">Only {selectedVariant.inStock} left in stock</span>
-              </div>
+              <Badge variant="outline" className="text-orange-600 border-orange-600">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                Only {selectedVariant.inStock} left in stock
+              </Badge>
             ) : (
-              <div className="flex items-center gap-2 text-green-600">
-                <Check className="w-4 h-4" />
-                <span className="text-sm">In stock</span>
-              </div>
+              <Badge variant="outline" className="text-green-600 border-green-600">
+                <Check className="w-4 h-4 mr-1" />
+                In stock
+              </Badge>
             )
           ) : (
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">Out of stock</span>
-            </div>
+            <Badge variant="destructive">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              Out of stock
+            </Badge>
           )}
         </div>
       )}
@@ -280,68 +253,50 @@ export default function ConfigurableProductAddToCart({
         <div className="space-y-3">
           <h3 className="font-medium text-gray-900">Quantity</h3>
           <div className="flex items-center border rounded-md w-fit">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               disabled={quantity <= 1}
-              className="px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 rounded-none"
             >
               −
-            </button>
+            </Button>
             <span className="px-4 py-2 border-x min-w-[3rem] text-center">{quantity}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setQuantity(Math.min(selectedVariant.inStock, quantity + 1))}
               disabled={quantity >= selectedVariant.inStock}
-              className="px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 rounded-none"
             >
               +
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Add to Cart Buttons */}
+      {/* Add to Cart Button */}
       <div className="flex flex-col gap-3">
         <Button
           onClick={handleAddToCart}
           disabled={!selectedVariant || selectedVariant.inStock === 0 || isAdding}
-          className="flex items-center justify-center gap-2 h-12 text-base font-medium"
+          className="h-12 text-base font-medium"
           size="lg"
         >
           {isAdding ? (
             <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
               Adding to Cart...
             </>
           ) : (
             <>
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-5 w-5 mr-2" />
               Add to Cart
             </>
           )}
         </Button>
-
-        <Button
-          variant="outline"
-          className="flex items-center justify-center gap-2 h-12 text-base font-medium"
-          size="lg"
-        >
-          <Heart className="h-5 w-5" />
-          Add to Wishlist
-        </Button>
       </div>
-
-      {/* Product Details */}
-      {selectedVariant && (
-        <div className="pt-4 border-t text-sm text-gray-600 space-y-1">
-          <p><span className="font-medium">SKU:</span> {selectedVariant.sku}</p>
-          {selectedVariant.color && (
-            <p><span className="font-medium">Color:</span> {selectedVariant.color.name}</p>
-          )}
-          {selectedVariant.size && (
-            <p><span className="font-medium">Size:</span> {selectedVariant.size.name}</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

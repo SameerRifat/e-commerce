@@ -60,13 +60,6 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     return (
         <div className="min-h-screen mt-20">
             <div className="custom_container py-8">
-                {/* Page Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-foreground mb-2">Your Account</h1>
-                    <p className="text-muted-foreground">
-                        Alex John, Email: alexjohn@gmail.com
-                    </p>
-                </div>
 
                 {/* Profile Layout with Vertical Tabs */}
                 <div className="flex flex-col lg:flex-row gap-8">
