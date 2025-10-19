@@ -1,13 +1,13 @@
 // src/app/(root)/layout.tsx
 import { Suspense } from "react";
 import CartInitializer from "@/components/CartInitializer";
-import Footer from "@/components/footer";
 import Navbar from "@/components/header/navbar";
 import TopBar from "@/components/header/top-bar";
 import { getCurrentUser } from "@/lib/auth/actions";
 import { NavbarErrorBoundary } from "./error-boundaries/navbar-error-boundary";
 import { UserSection } from "@/components/header/user-section";
 import { UserSectionSkeleton } from "@/components/header/user-section-skeleton";
+import Footer from "@/components/footer";
 
 export const dynamic = 'force-dynamic';
 
