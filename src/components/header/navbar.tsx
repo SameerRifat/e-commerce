@@ -15,7 +15,6 @@ const NAV_LINKS = [
     { label: "Women", href: "/products?gender=women" },
     { label: "Kids", href: "/products?gender=unisex" },
     { label: "Collections", href: "/collections" },
-    // { label: "Contact", href: "/contact" },
 ] as const;
 
 interface NavbarProps {
@@ -32,7 +31,7 @@ export default function Navbar({ children }: NavbarProps) {
     return (
         <header className="sticky top-0 z-50 bg-background border-b border-border">
             <nav
-                className="custom_container flex h-16 items-center gap-4 lg:gap-6"
+                className="custom_container flex h-[60px] sm:h-16 items-center gap-4 lg:gap-6"
                 aria-label="Primary navigation"
             >
                 {/* Logo - STATIC, renders immediately */}
@@ -66,9 +65,20 @@ export default function Navbar({ children }: NavbarProps) {
                     <PersistentSearch className="w-full max-w-xl" />
                 </div>
 
-                {/* Desktop Actions */}
-                <div className="hidden items-center gap-3 md:flex flex-shrink-0">
-                    {/* Cart Link - STATIC, renders immediately */}
+                {/* Desktop & Mobile Actions */}
+                <div className="flex items-center gap-3 ml-auto flex-shrink-0">
+                    {/* Mobile Search - STATIC, hidden on desktop */}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMobileSearchOpen(true)}
+                        aria-label="Search products"
+                        className="md:hidden"
+                    >
+                        <Search className="h-5 w-5" />
+                    </Button>
+
+                    {/* Cart - visible on all sizes */}
                     <Button
                         variant="ghost"
                         size="sm"
@@ -90,46 +100,11 @@ export default function Navbar({ children }: NavbarProps) {
                         </Link>
                     </Button>
 
-                    {/* ✅ User Section - ONLY THIS PART SUSPENDS */}
+                    {/* ✅ User Section - VISIBLE ON ALL SIZES (suspended component) */}
                     {children}
-                </div>
 
-                {/* Mobile Actions */}
-                <div className="flex items-center gap-2 md:hidden ml-auto">
-                    {/* Mobile Search - STATIC */}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setMobileSearchOpen(true)}
-                        aria-label="Search products"
-                    >
-                        <Search className="h-5 w-5" />
-                    </Button>
-
-                    {/* Mobile Cart - STATIC */}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                        className="relative"
-                    >
-                        <Link href="/cart" aria-label={`Cart with ${itemCount} items`}>
-                            <div className="relative">
-                                <ShoppingBag className="h-5 w-5" />
-                                {itemCount > 0 && (
-                                    <Badge
-                                        className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[9px] pointer-events-none"
-                                    >
-                                        {itemCount > 9 ? "9+" : itemCount}
-                                    </Badge>
-                                )}
-                            </div>
-                        </Link>
-                    </Button>
-
-                    {/* Mobile Menu - needs user data, so we pass children here too */}
+                    {/* Mobile Menu Trigger - navigation links only */}
                     <MobileSidebar
-                        userSection={children}
                         navLinks={NAV_LINKS}
                         open={mobileMenuOpen}
                         onOpenChange={setMobileMenuOpen}
@@ -138,7 +113,7 @@ export default function Navbar({ children }: NavbarProps) {
                                 variant="ghost"
                                 size="sm"
                                 aria-label="Toggle menu"
-                                className="cursor-pointer"
+                                className="cursor-pointer md:hidden"
                             >
                                 <Menu className="h-5 w-5" />
                             </Button>

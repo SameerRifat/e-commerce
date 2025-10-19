@@ -1,8 +1,8 @@
-// src/components/header/user-section.tsx
+// src/components/header/admin-user-section.tsx
 "use client";
 
 import Link from "next/link";
-import { User as UserIcon, ShoppingBag, MapPin } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -26,7 +26,7 @@ interface User {
     role?: string | null;
 }
 
-interface UserSectionProps {
+interface AdminUserSectionProps {
     user: User | null;
 }
 
@@ -39,7 +39,7 @@ const getInitials = (name: string) => {
         .slice(0, 2);
 };
 
-export function UserSection({ user }: UserSectionProps) {
+export function AdminUserSection({ user }: AdminUserSectionProps) {
     if (!user) {
         return (
             <Button variant="default" size="sm" asChild>
@@ -54,11 +54,11 @@ export function UserSection({ user }: UserSectionProps) {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-2 p-0 sm:px-3 sm:py-5 rounded-full sm:rounded-md"
-                    aria-label="User menu"
+                    className="gap-2"
+                    aria-label="Admin user menu"
                 >
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.image || undefined} alt={user.name} className="object-cover"/>
+                        <AvatarImage src={user.image || undefined} alt={user.name} />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(user.name)}
                         </AvatarFallback>
@@ -66,7 +66,7 @@ export function UserSection({ user }: UserSectionProps) {
                     <span className="hidden lg:inline text-sm">{user.name}</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium">{user.name}</p>
@@ -80,28 +80,6 @@ export function UserSection({ user }: UserSectionProps) {
                         Profile
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link href="/profile/orders" className="cursor-pointer">
-                        <ShoppingBag className="mr-2 h-4 w-4" />
-                        Orders
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link href="/profile/addresses" className="cursor-pointer">
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Addresses
-                    </Link>
-                </DropdownMenuItem>
-                {user?.role === "admin" && (
-                    <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link href="/dashboard" className="cursor-pointer">
-                                Dashboard
-                            </Link>
-                        </DropdownMenuItem>
-                    </>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                     <SignOutButton className="w-full text-left text-destructive cursor-pointer flex items-center">

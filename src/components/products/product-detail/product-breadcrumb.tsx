@@ -14,22 +14,22 @@ interface ProductBreadcrumbProps {
 
 export default function ProductBreadcrumb({ productName }: ProductBreadcrumbProps) {
     return (
-        <Breadcrumb className="py-4">
+        <Breadcrumb className="py-4 sm:py-5">
             <BreadcrumbList>
                 <BreadcrumbItem>
-                    <BreadcrumbLink href="/" className="text-caption text-dark-700 hover:text-dark-900">
+                    <BreadcrumbLink href="/" className="text-dark-700">
                         Home
                     </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                    <BreadcrumbLink href="/products" className="text-caption text-dark-700 hover:text-dark-900">
+                    <BreadcrumbLink href="/products" className="text-dark-700">
                         Products
                     </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                    <BreadcrumbPage className="text-caption text-dark-900">
+                    <BreadcrumbPage>
                         {productName}
                     </BreadcrumbPage>
                 </BreadcrumbItem>

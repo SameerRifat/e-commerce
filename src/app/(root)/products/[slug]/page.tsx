@@ -16,11 +16,11 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
 type Props = {
-    params: Promise<{ slug: string }>; 
+    params: Promise<{ slug: string }>;
 };
 
 export default async function ProductDetailPage({ params }: Props) {
-    const { slug } = await params; 
+    const { slug } = await params;
     const data = await getProductBySlug(slug);
 
     if (!data) {
@@ -112,35 +112,40 @@ export default async function ProductDetailPage({ params }: Props) {
                         <div className="flex flex-col gap-6">
                             <header className="flex flex-col gap-3">
                                 {/* Product Title */}
-                                <h1 className="text-2xl md:text-3xl font-bold text-dark-900">{product.name}</h1>
+                                <h1 className="text-lg sm:text-xl 2xl:text-2xl font-semibold">{product.name}</h1>
 
                                 {/* Metadata Row: Brand, Category, Gender */}
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {product.brand && (
-                                        <Link href={`/brands/${product.brand.slug}`}>
+                                        <Link href={`/products?brand=${product.brand.slug}`}>
                                             <Badge
                                                 variant="secondary"
-                                                className="text-sm cursor-pointer hover:bg-gray-300 transition-colors"
+                                                className="cursor-pointer"
                                             >
                                                 {product.brand.name}
                                             </Badge>
                                         </Link>
                                     )}
                                     {product.category && (
-                                        <Link href={`/categories/${product.category.slug}`}>
+                                        <Link href={`/products?category=${product.category.slug}`}>
                                             <Badge
                                                 variant="outline"
-                                                className="text-sm cursor-pointer hover:border-gray-500 transition-colors"
+                                                className="cursor-pointer"
                                             >
                                                 {product.category.name}
                                             </Badge>
                                         </Link>
                                     )}
                                     {product.gender && (
-                                        <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                                        <Badge variant='secondary'>
+                                            {product.gender.label}
+                                        </Badge>
+                                    )}
+                                    {/* {product.gender && (
+                                        <span className="text-gray-600 px-2 py-1 bg-gray-100 rounded">
                                             {product.gender.label}
                                         </span>
-                                    )}
+                                    )} */}
                                 </div>
                             </header>
 
@@ -183,7 +188,7 @@ export default async function ProductDetailPage({ params }: Props) {
                         <div className="flex flex-col gap-6">
                             <header className="flex flex-col gap-3">
                                 {/* Product Title */}
-                                <h1 className="text-2xl md:text-3xl font-bold text-dark-900">{product.name}</h1>
+                                <h1 className="text-lg sm:text-xl 2xl:text-2xl font-semibold">{product.name}</h1>
 
                                 {/* Metadata Row: Brand, Category, Gender */}
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -272,9 +277,9 @@ export default async function ProductDetailPage({ params }: Props) {
             {/* Recommendations Section */}
             <Suspense
                 fallback={
-                    <section className="mt-16">
-                        <h2 className="mb-6 text-heading-3 text-dark-900">You Might Also Like</h2>
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <section className="py-10 sm:py-12 md:py-14">
+                        <h2 className="text-lg sm:text-xl 2xl:text-2xl font-medium leading-tight mb-3 sm:mb-5">You Might Also Like</h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6">
                             {Array.from({ length: 3 }).map((_, i) => (
                                 <Skeleton key={i} className="h-64 rounded-xl" />
                             ))}

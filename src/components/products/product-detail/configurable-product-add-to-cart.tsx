@@ -150,12 +150,12 @@ export default function ConfigurableProductAddToCart({
       {/* Price Display with Shadcn Badge */}
       {selectedVariant && (
         <div className="flex items-center gap-3">
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-2xl sm:text-3xl font-bold">
             {formatPrice(displayPrice!)}
           </p>
           {compareAtPrice && (
             <>
-              <span className="text-xl text-gray-500 line-through">
+              <span className="text-lg sm:text-xl text-gray-500 line-through">
                 {formatPrice(compareAtPrice)}
               </span>
               {discount && (
@@ -171,7 +171,7 @@ export default function ConfigurableProductAddToCart({
       {/* Color Selection */}
       {availableColors.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-medium text-gray-900">
+          <h3 className="text-sm sm:text-base font-medium">
             Color: {availableColors.find(c => c.id === selectedColorId)?.name || 'Select'}
           </h3>
           <div className="flex flex-wrap gap-3">
@@ -185,8 +185,8 @@ export default function ConfigurableProductAddToCart({
                   size="icon"
                   onClick={() => variantSelection.setSelectedColor(color.id)}
                   className={`relative w-12 h-12 rounded-full border-2 p-0 ${isSelected
-                      ? 'border-gray-900 shadow-md'
-                      : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-gray-800 shadow-md'
+                    : 'border-gray-300 hover:border-gray-400'
                     }`}
                   title={color.name}
                 >
@@ -195,8 +195,8 @@ export default function ConfigurableProductAddToCart({
                     style={{ backgroundColor: color.hexCode }}
                   />
                   {isSelected && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-900 rounded-full flex items-center justify-center">
-                      <Check className="w-2.5 h-2.5 text-white" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-800 rounded-full flex items-center justify-center">
+                      <Check className="!w-3 !h-3 text-white" />
                     </div>
                   )}
                 </Button>
@@ -209,7 +209,7 @@ export default function ConfigurableProductAddToCart({
       {/* Size Selection */}
       {availableSizes.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-medium text-gray-900">
+          <h3 className="text-sm sm:text-base font-medium">
             Size: {availableSizes.find(s => s.id === selectedSizeId)?.name || 'Select'}
           </h3>
           <div className="grid grid-cols-4 2xl:grid-cols-5 gap-3">
@@ -258,7 +258,7 @@ export default function ConfigurableProductAddToCart({
       {/* Quantity Selection */}
       {selectedVariant && selectedVariant.inStock > 0 && (
         <div className="space-y-3">
-          <h3 className="font-medium text-gray-900">Quantity</h3>
+          <h3 className="font-medium">Quantity</h3>
           <div className="flex items-center border rounded-md w-fit">
             <Button
               variant="ghost"

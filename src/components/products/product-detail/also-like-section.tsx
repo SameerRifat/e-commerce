@@ -12,8 +12,8 @@ export default async function AlsoLikeSection({ productId }: AlsoLikeSectionProp
     if (!recs.length) return null;
 
     return (
-        <section className="my-16">
-            <h2 className="mb-6 text-heading-3 text-dark-900">You Might Also Like</h2>
+        <section className="py-10 sm:py-12 md:py-14">
+            <h2 className="text-lg sm:text-xl 2xl:text-2xl font-medium leading-tight mb-3 sm:mb-5">You Might Also Like</h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6">
                 {recs.map((p) => (
                     <ProductCard

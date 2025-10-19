@@ -4,7 +4,7 @@ import { CardSkeleton } from "./card-skeleton";
 
 export function ProductsSkeleton() {
     return (
-        <section className="custom_container py-12">
+        <section className="custom_container">
             <Skeleton className="h-8 w-48 mb-6" />
             <CardSkeleton count={4} />
         </section>

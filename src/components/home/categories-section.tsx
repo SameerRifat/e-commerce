@@ -54,15 +54,17 @@ const CategoriesSection = ({ categories }: CategoriesSectionProps) => {
   }
 
   return (
-    <section className="py-16 sm:py-20 lg:pb-28">
-      <div className="custom_container">
-        <SectionHeader
-          title="Categories"
+    <section>
+      <div>
+        <div className='custom_container'>
+          <SectionHeader
+            title="Categories"
           // subtitle="Discover our curated collection of premium fragrances"
-        />
+          />
+        </div>
 
         <div
-          className="relative"
+          className="sm:w-[91%] sm:max-w-[95rem] sm:mx-auto relative"
         >
           <Carousel
             setApi={handleApiChange}
@@ -75,7 +77,7 @@ const CategoriesSection = ({ categories }: CategoriesSectionProps) => {
             }}
             className="w-full"
           >
-            <CarouselContent className="-ml-2 md:-ml-4 lg:-ml-6">
+            <CarouselContent className="-ml-2 md:-ml-4 lg:-ml-6 px-3 sm:px-0">
               {categories.map((category) => (
                 <CarouselItem
                   key={category.id}

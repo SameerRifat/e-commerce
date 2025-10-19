@@ -3,6 +3,7 @@ import React from "react";
 import ProductCard from "@/components/shared/product-card";
 import Link from "next/link";
 import SectionHeader from "../shared/section-header";
+import { Button } from "../ui/button";
 
 interface Product {
     id: string;
@@ -23,7 +24,7 @@ interface LatestProductsSectionProps {
 
 const LatestProductsSection: React.FC<LatestProductsSectionProps> = ({ products }) => {
     return (
-        <section aria-labelledby="latest" className="custom_container py-12">
+        <section aria-labelledby="latest" className="custom_container">
             <SectionHeader
                 title="Latest Products"
                 // subtitle="Fresh additions to our collection"
@@ -49,6 +50,18 @@ const LatestProductsSection: React.FC<LatestProductsSectionProps> = ({ products 
                         />
                     );
                 })}
+            </div>
+
+            {/* Mobile-only View All Button */}
+            <div className="flex justify-center md:hidden mt-6 sm:mt-8">
+                <Button
+                    asChild
+                    className="w-full sm:w-auto"
+                >
+                    <Link href="/products">
+                        View All Products
+                    </Link>
+                </Button>
             </div>
         </section>
     );

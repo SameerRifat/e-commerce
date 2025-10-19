@@ -18,14 +18,14 @@ export default function SectionHeader({
     className = '',
 }: SectionHeaderProps) {
     return (
-        <div className={`flex justify-between items-start flex-wrap gap-4 mb-5 ${className}`}>
+        <div className={`flex justify-between items-start flex-wrap gap-4 mb-3 sm:mb-5 ${className}`}>
             {/* Left: Title & Subtitle */}
             <div>
-                <h2 className="text-lg sm:text-xl 2xl:text-2xl font-medium mb-2 leading-tight">
+                <h2 className="text-lg sm:text-xl 2xl:text-2xl font-medium leading-tight">
                     {title}
                 </h2>
                 {subtitle && (
-                    <p className="text-xs sm:text-sm lg:text-base text-muted-foreground hidden sm:block">
+                    <p className="text-xs sm:text-sm lg:text-base text-muted-foreground hidden sm:block mt-2">
                         {subtitle}
                     </p>
                 )}

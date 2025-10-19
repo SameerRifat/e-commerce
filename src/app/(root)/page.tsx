@@ -20,22 +20,24 @@ export default function Home() {
         </Suspense>
       </HeroErrorBoundary>
 
-      {/* Categories Section - Independent loading with error boundary */}
-      <SectionErrorBoundary title="Failed to load categories">
-        <Suspense fallback={<CategoriesSkeleton />}>
-          <CategoriesSectionData />
-        </Suspense>
-      </SectionErrorBoundary>
+      <div className="py-10 sm:py-12 md:py-14 flex flex-col gap-10 sm:gap-12 md:gap-16 2xl:gap-20">
+        {/* Categories Section - Independent loading with error boundary */}
+        <SectionErrorBoundary title="Failed to load categories">
+          <Suspense fallback={<CategoriesSkeleton />}>
+            <CategoriesSectionData />
+          </Suspense>
+        </SectionErrorBoundary>
 
-      {/* Products Section - Independent loading with error boundary */}
-      <SectionErrorBoundary title="Failed to load products">
-        <Suspense fallback={<ProductsSkeleton />}>
-          <LatestProductsSectionData />
-        </Suspense>
-      </SectionErrorBoundary>
+        {/* Products Section - Independent loading with error boundary */}
+        <SectionErrorBoundary title="Failed to load products">
+          <Suspense fallback={<ProductsSkeleton />}>
+            <LatestProductsSectionData />
+          </Suspense>
+        </SectionErrorBoundary>
 
-      {/* Features Section - Static, no Suspense or error boundary needed */}
-      <FeaturesSection />
+        {/* Features Section - Static, no Suspense or error boundary needed */}
+        <FeaturesSection />
+      </div>
     </>
   );
 }

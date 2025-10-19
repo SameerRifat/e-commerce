@@ -32,7 +32,7 @@ const FeaturesSection = () => {
     ];
 
     return (
-        <section className="py-12 sm:py-16 lg:py-20 bg-muted/30">
+        <section className="bg-muted/30">
             <div className="custom_container">
                 {/* Section Header */}
                 <div className="text-center mb-6 sm:mb-8 lg:mb-10">

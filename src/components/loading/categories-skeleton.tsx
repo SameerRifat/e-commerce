@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function CategoriesSkeleton() {
   return (
-    <section className="py-16 sm:py-20 lg:pb-28">
+    <section>
       <div className="custom_container">
         <div className="mb-8 sm:mb-12">
           <Skeleton className="h-8 w-48 mb-4" />

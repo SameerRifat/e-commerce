@@ -145,7 +145,7 @@ export default function ProductGallery({
 
       {/* Mobile Thumbnail Carousel - Horizontal */}
       {images.length > 1 && isMobile && (
-        <div className="w-full order-2 lg:order-1 lg:hidden mt-3">
+        <div className="w-full order-2 lg:order-1 lg:hidden mt-2">
           <Carousel
             setApi={setThumbApi}
             opts={{
@@ -220,11 +220,11 @@ export default function ProductGallery({
         </div>
 
         {/* Image Counter */}
-        {images.length > 1 && (
+        {/* {images.length > 1 && (
           <div className="text-center text-xs text-muted-foreground">
             {activeIndex + 1} / {images.length}
           </div>
-        )}
+        )} */}
       </div>
     </section>
   );
