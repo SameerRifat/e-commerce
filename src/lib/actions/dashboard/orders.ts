@@ -3,10 +3,10 @@
 
 import { db } from "@/lib/db";
 import { orders, orderItems, products, productVariants, addresses, users, productImages, colors, sizes } from "@/lib/db/schema";
-import { eq, desc, and, gte, lte, like, or, sql, count, inArray } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth/actions";
 import { revalidatePath } from "next/cache";
-import type { OrderWithDetails } from "@/lib/actions/orders";
+import type { OrderWithDetails, PaymentMethod } from "@/lib/actions/orders";
 
 // Dashboard-specific order type with user info
 export interface DashboardOrder {
@@ -47,6 +47,8 @@ export interface OrderStats {
   totalRevenue: number;
   todayOrders: number;
 }
+
+type OrderStatus = 'pending' | 'processing' | 'paid' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
 // Helper function to restore inventory when order is cancelled
 async function restoreInventory(orderId: string): Promise<void> {
@@ -164,6 +166,7 @@ export async function getDashboardOrder(orderId: string): Promise<{
         .select({
           id: products.id,
           name: products.name,
+          slug: products.slug,
           sku: products.sku,
         })
         .from(products)
@@ -181,6 +184,7 @@ export async function getDashboardOrder(orderId: string): Promise<{
           variantSku: productVariants.sku,
           productId: productVariants.productId,
           productName: products.name,
+          productSlug: products.slug,
           colorId: colors.id,
           colorName: colors.name,
           colorHexCode: colors.hexCode,
@@ -198,14 +202,18 @@ export async function getDashboardOrder(orderId: string): Promise<{
       // Add product IDs from variants for image fetching
       variantsData.forEach(v => {
         if (!productsMap.has(v.productId)) {
-          productsMap.set(v.productId, { id: v.productId, name: v.productName });
+          productsMap.set(v.productId, { 
+            id: v.productId, 
+            name: v.productName,
+            slug: v.productSlug
+          });
         }
       });
     }
 
     // Batch fetch all images for all products
     const allProductIds = Array.from(productsMap.keys());
-    const imagesMap = new Map<string, Array<any>>();
+    const imagesMap = new Map<string, Array<{ id: string; url: string; isPrimary: boolean }>>();
     
     if (allProductIds.length > 0) {
       const imagesData = await db
@@ -264,6 +272,7 @@ export async function getDashboardOrder(orderId: string): Promise<{
           product: {
             id: product.id,
             name: product.name,
+            slug: product.slug,
             sku: product.sku || '',
             images,
           },
@@ -289,6 +298,7 @@ export async function getDashboardOrder(orderId: string): Promise<{
             product: {
               id: variant.productId,
               name: variant.productName,
+              slug: variant.productSlug
             },
             color: variant.colorId ? {
               id: variant.colorId,
@@ -314,7 +324,7 @@ export async function getDashboardOrder(orderId: string): Promise<{
       subtotal: parseFloat(order.subtotal),
       shippingCost: parseFloat(order.shippingCost),
       taxAmount: parseFloat(order.taxAmount),
-      paymentMethod: order.paymentMethod,
+      paymentMethod: order.paymentMethod as PaymentMethod,
       notes: order.notes,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
@@ -365,7 +375,7 @@ export async function getDashboardOrders(filters: OrderFilters = {}) {
     const conditions = [];
 
     if (status && status !== 'all') {
-      conditions.push(eq(orders.status, status as any));
+      conditions.push(eq(orders.status, status as OrderStatus));
     }
 
     if (dateFrom) {
@@ -455,7 +465,7 @@ export async function getDashboardOrders(filters: OrderFilters = {}) {
         customerEmail: order.userEmail,
         status: order.status,
         totalAmount: parseFloat(order.totalAmount),
-        paymentMethod: order.paymentMethod,
+        paymentMethod: order.paymentMethod as string,
         itemCount: itemCountMap.get(order.id) || 0,
         createdAt: order.createdAt,
         shippingAddress: address ? {
@@ -545,7 +555,7 @@ export async function getOrderStats(): Promise<{ success: boolean; stats?: Order
       shippedOrders: shippedOrders[0]?.count || 0,
       deliveredOrders: deliveredOrders[0]?.count || 0,
       cancelledOrders: cancelledOrders[0]?.count || 0,
-      totalRevenue: parseFloat(revenueResult[0]?.total || '0'),
+      totalRevenue: parseFloat(String(revenueResult[0]?.total || 0)),
       todayOrders: todayOrders[0]?.count || 0,
     };
 
@@ -559,7 +569,7 @@ export async function getOrderStats(): Promise<{ success: boolean; stats?: Order
 // Update order status (admin only) with business rules validation and inventory restoration
 export async function updateDashboardOrderStatus(
   orderId: string,
-  newStatus: 'pending' | 'processing' | 'paid' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled'
+  newStatus: OrderStatus
 ) {
   try {
     const user = await getCurrentUser();
@@ -704,7 +714,7 @@ function validateStatusTransition(
 // Bulk update order statuses
 export async function bulkUpdateOrderStatus(
   orderIds: string[],
-  newStatus: 'pending' | 'processing' | 'paid' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled'
+  newStatus: OrderStatus
 ) {
   try {
     const user = await getCurrentUser();

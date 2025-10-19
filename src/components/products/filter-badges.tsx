@@ -1,4 +1,4 @@
-// src/components/products/filter-badges.tsx
+// src/components/products/filter-badges.tsx (FIXED for PKR)
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +13,21 @@ type FilterBadge = {
   filterKey: "gender" | "brand" | "category" | "size" | "color" | "price";
   value: string;
 };
+
+// Helper function to format PKR prices
+function formatPriceRange(priceId: string): string {
+  const [min, max] = priceId.split("-");
+  
+  if (min && max) {
+    return `PKR ${Number(min).toLocaleString()} - ${Number(max).toLocaleString()}`;
+  } else if (min && !max) {
+    return `Over PKR ${Number(min).toLocaleString()}`;
+  } else if (!min && max) {
+    return `Up to PKR ${Number(max).toLocaleString()}`;
+  }
+  
+  return priceId;
+}
 
 export default function FilterBadges() {
   const router = useRouter();
@@ -58,7 +73,7 @@ export default function FilterBadges() {
     const sizes = getArrayParam(search, "size");
     sizes.forEach((s) => {
       badges.push({
-        label: `Size: ${s}`,
+        label: `Size: ${s.toUpperCase()}`,
         filterKey: "size",
         value: s,
       });
@@ -74,13 +89,11 @@ export default function FilterBadges() {
       });
     });
 
-    // Price badges
+    // Price badges - FIXED for PKR
     const prices = getArrayParam(search, "price");
     prices.forEach((p) => {
-      const [min, max] = p.split("-");
-      const label = min && max ? `$${min} - $${max}` : min && !max ? `Over $${min}` : `$0 - $${max}`;
       badges.push({
-        label,
+        label: formatPriceRange(p),
         filterKey: "price",
         value: p,
       });

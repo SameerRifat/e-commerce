@@ -48,6 +48,12 @@ import StepNavigation from "./components/StepNavigation";
 const unifiedProductSchema = completeProductFormSchema;
 type UnifiedProductFormData = CompleteProductFormData;
 
+interface SizeCategory {
+  id: string;
+  name: string;
+  createdAt?: Date;
+}
+
 interface UnifiedProductFormProps {
   mode: "create" | "edit";
   productId?: string;
@@ -57,9 +63,21 @@ interface UnifiedProductFormProps {
     categories: Array<{ id: string; name: string; slug: string; parentId?: string | null }>;
     genders: Array<{ id: string; label: string; slug: string }>;
     colors: Array<{ id: string; name: string; slug: string; hexCode: string }>;
-    sizes: Array<{ id: string; name: string; slug: string; sortOrder: number }>;
+    sizes: Array<{ 
+      id: string; 
+      name: string; 
+      slug: string; 
+      sortOrder: number;
+      categoryId?: string | null;
+      category?: {
+        id: string;
+        name: string;
+        createdAt: Date;
+      } | null; 
+    }>;
   };
 }
+
 
 const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
   mode,
@@ -79,6 +97,7 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
   // Default values for create mode
   const defaultFormValues: CompleteProductFormData = {
     name: "",
+    slug: "",
     description: "",
     categoryId: null,
     genderId: null,
@@ -110,10 +129,10 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
         hasImages: initialData.images?.length > 0,
         name: initialData.name,
       });
-      
+
       // Reset the form with the initial data
       form.reset(initialData);
-      
+
       console.log("✅ Form reset complete. Current values:", {
         name: form.getValues("name"),
         productType: form.getValues("productType"),
@@ -208,7 +227,7 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
 
   const onSubmit = async (data: UnifiedProductFormData) => {
     console.log(`onSubmit is called for ${mode} mode`);
-    
+
     if (!isFormReadyForSubmission) {
       setSubmitError("Form is not ready for submission");
       return;
@@ -216,10 +235,10 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
 
     setIsLoading(true);
     setSubmitError(null);
-    
+
     try {
       console.log(`Submitting ${mode} product:`, JSON.stringify(data, null, 2));
-      
+
       // Validate the complete form one more time
       const validationResult = unifiedProductSchema.safeParse(data);
       if (!validationResult.success) {
@@ -229,27 +248,27 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
       }
 
       // Check if there are any pending image uploads
-      const hasPendingImages = data.images.some(img => 
+      const hasPendingImages = data.images.some(img =>
         img.url.startsWith('blob:') || ('file' in img && (img as unknown as PendingImage).file)
       );
 
       const finalData = { ...data };
-      
+
       // If there are pending images, upload them first (ATOMIC TRANSACTION APPROACH)
       if (hasPendingImages && imageUploadRef.current) {
         try {
           console.log(`🔄 Uploading ${data.images.length} pending images before product ${mode}...`);
           setSubmitError("Uploading images... Please wait.");
-          
+
           const uploadedImages = await imageUploadRef.current.uploadPendingImages();
-          
+
           // Validate that ALL images were uploaded successfully
-          const failedUploads = uploadedImages.filter(img => 
-            img.url.startsWith('blob:') || 
+          const failedUploads = uploadedImages.filter(img =>
+            img.url.startsWith('blob:') ||
             !img.url.startsWith('http') ||
             img.url.includes('example.com')
           );
-          
+
           if (failedUploads.length > 0) {
             console.error(`❌ ${failedUploads.length} image(s) failed to upload:`, failedUploads);
             throw new Error(
@@ -258,42 +277,42 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
               `Please check your internet connection and try again.`
             );
           }
-          
+
           // Ensure we have at least one image with a valid URL
-          const validImages = uploadedImages.filter(img => 
-            img.url && 
-            img.url.startsWith('http') && 
+          const validImages = uploadedImages.filter(img =>
+            img.url &&
+            img.url.startsWith('http') &&
             !img.url.includes('example.com')
           );
-          
+
           if (validImages.length === 0) {
             throw new Error("No valid images were uploaded. At least one image is required.");
           }
-          
+
           finalData.images = uploadedImages;
           console.log(`✅ All ${uploadedImages.length} images uploaded successfully!`);
           setSubmitError(null);
         } catch (uploadError) {
           console.error("💥 Image upload failed:", uploadError);
           setSubmitError(
-            uploadError instanceof Error 
-              ? `Image Upload Failed: ${uploadError.message}` 
+            uploadError instanceof Error
+              ? `Image Upload Failed: ${uploadError.message}`
               : "Failed to upload images. Please check your connection and try again."
           );
           return;
         }
       }
-      
+
       // Validate that all images have proper URLs
-      const invalidImages = finalData.images.filter(img => 
+      const invalidImages = finalData.images.filter(img =>
         !img.url || (!img.url.startsWith('http') && !img.url.startsWith('https'))
       );
-      
+
       if (invalidImages.length > 0) {
         setSubmitError("Some images have invalid URLs. Please re-upload your images.");
         return;
       }
-      
+
       // Call appropriate server action based on mode
       console.log(`🚀 ${mode === 'edit' ? 'Updating' : 'Creating'} product with uploaded images...`);
       console.log("📊 Final product data:", {
@@ -302,11 +321,11 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
         imageUrls: finalData.images.map(img => img.url),
         productType: finalData.productType
       });
-      
+
       const result: ActionResult<{ productId: string }> = mode === 'edit' && productId
         ? await updateProduct(productId, finalData)
         : await createProduct(finalData);
-      
+
       if (result.success) {
         console.log("🎉 ATOMIC TRANSACTION COMPLETED SUCCESSFULLY!");
         console.log(`✅ Product ${mode === 'edit' ? 'updated' : 'created'} with ID:`, result.data?.productId);
@@ -315,7 +334,7 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
       } else {
         console.error(`Product ${mode} failed:`, result.error);
         setSubmitError(result.error || `Failed to ${mode} product`);
-        
+
         // Handle field errors
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, errors]) => {
@@ -329,8 +348,8 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
     } catch (error) {
       console.error(`Error ${mode === 'edit' ? 'updating' : 'saving'} product:`, error);
       setSubmitError(
-        error instanceof Error 
-          ? error.message 
+        error instanceof Error
+          ? error.message
           : "An unexpected error occurred. Please try again."
       );
     } finally {
@@ -338,13 +357,12 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
     }
   };
 
-
   return (
     <div className="space-y-6">
       <PageHeader
         title={title}
-        description={isEditMode 
-          ? "Update product details, variants, pricing, and inventory" 
+        description={isEditMode
+          ? "Update product details, variants, pricing, and inventory"
           : "Create a complete product with variants, pricing, and inventory in one streamlined flow"
         }
       >
@@ -390,9 +408,12 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
             <TabsContent value="basic" className="space-y-6">
               <ProductBasicInfoStep
                 control={form.control}
+                watch={form.watch}
+                setValue={form.setValue}
                 brands={referenceData.brands}
                 categories={referenceData.categories}
                 genders={referenceData.genders}
+                mode = {mode}
               />
             </TabsContent>
 
@@ -428,7 +449,6 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
             {/* Step 4: Inventory & Stock */}
             <TabsContent value="inventory" className="space-y-6">
               <ProductInventoryStep
-                control={form.control}
                 variants={watchedVariants}
                 colors={referenceData.colors}
                 sizes={referenceData.sizes}
@@ -465,14 +485,14 @@ const UnifiedProductForm: React.FC<UnifiedProductFormProps> = ({
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isLoading || !isFormReadyForSubmission}
                 className={`cursor-pointer ${!isFormReadyForSubmission ? "opacity-50" : ""}`}
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isLoading 
-                  ? `${mode === 'edit' ? 'Updating' : 'Creating'} Product...` 
+                {isLoading
+                  ? `${mode === 'edit' ? 'Updating' : 'Creating'} Product...`
                   : `${mode === 'edit' ? 'Update' : 'Create'} Product`
                 }
               </Button>

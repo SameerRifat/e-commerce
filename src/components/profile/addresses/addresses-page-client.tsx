@@ -1,5 +1,4 @@
 // @/components/profile/addresses/addresses-page-client.tsx
-
 'use client';
 
 import { useState } from 'react';

@@ -8,6 +8,11 @@ export const VALIDATION_RULES = {
       minLength: 1,
       maxLength: 255,
     },
+    slug: {
+      minLength: 1,
+      maxLength: 255,
+      pattern: /^[a-z0-9-]+$/, // ADD THIS
+    },
     description: {
       minLength: 10,
       maxLength: 5000,
@@ -52,6 +57,12 @@ export const basicInfoSchema = z.object({
     .min(VALIDATION_RULES.product.name.minLength, "Product name is required")
     .max(VALIDATION_RULES.product.name.maxLength, `Product name must be less than ${VALIDATION_RULES.product.name.maxLength} characters`)
     .trim(),
+  slug: z
+    .string()
+    .min(VALIDATION_RULES.product.slug.minLength, "Product slug is required")
+    .max(VALIDATION_RULES.product.slug.maxLength, `Slug must be less than ${VALIDATION_RULES.product.slug.maxLength} characters`)
+    .regex(VALIDATION_RULES.product.slug.pattern, "Slug can only contain lowercase letters, numbers, and hyphens")
+    .trim(), 
   description: z
     .string()
     .min(VALIDATION_RULES.product.description.minLength, `Description must be at least ${VALIDATION_RULES.product.description.minLength} characters`)
@@ -89,7 +100,6 @@ export const simpleProductSchema = z.object({
       return !isNaN(num) && num >= VALIDATION_RULES.variant.price.min && num <= VALIDATION_RULES.variant.price.max;
     }, `Price must be between $${VALIDATION_RULES.variant.price.min} and $${VALIDATION_RULES.variant.price.max}`)
     .refine((val) => {
-      const num = parseFloat(val);
       const decimalPlaces = (val.split('.')[1] || '').length;
       return decimalPlaces <= VALIDATION_RULES.variant.price.precision;
     }, `Price can have at most ${VALIDATION_RULES.variant.price.precision} decimal places`),
@@ -155,7 +165,6 @@ export const variantSchema = z.object({
       return !isNaN(num) && num >= VALIDATION_RULES.variant.price.min && num <= VALIDATION_RULES.variant.price.max;
     }, `Price must be between $${VALIDATION_RULES.variant.price.min} and $${VALIDATION_RULES.variant.price.max}`)
     .refine((val) => {
-      const num = parseFloat(val);
       const decimalPlaces = (val.split('.')[1] || '').length;
       return decimalPlaces <= VALIDATION_RULES.variant.price.precision;
     }, `Price can have at most ${VALIDATION_RULES.variant.price.precision} decimal places`),
@@ -312,14 +321,14 @@ export const completeProductFormSchema = z.object({
   ...basicInfoSchema.shape,
   // Step 2: Simple product fields (optional for all, validated conditionally)
   sku: z.string().optional(),
-  price: z.string().optional(), 
+  price: z.string().optional(),
   salePrice: z.string().optional().nullable(),
   inStock: z.number().optional(),
   weight: z.union([z.number(), z.null(), z.undefined()]).optional().nullable(),
   dimensions: z.union([
     z.object({
       length: z.number().optional(),
-      width: z.number().optional(), 
+      width: z.number().optional(),
       height: z.number().optional(),
     }).optional(),
     z.null(),
@@ -351,7 +360,7 @@ export const completeProductFormSchema = z.object({
         path: ['variants'],
       });
     }
-    
+
     // Validate variants array
     const variantsValidation = variantsSchema.safeParse({ variants: data.variants });
     if (!variantsValidation.success) {
@@ -384,10 +393,10 @@ export const validateStep = {
 };
 
 // Helper function to check if step can be accessed
-export const canAccessStep = (stepIndex: number, formData: any): boolean => {
+  export const canAccessStep = (stepIndex: number, formData: Partial<CompleteProductFormData>): boolean => {
   const isSimpleProduct = formData.productType === 'simple';
   const basicValid = validateStep.basic(formData).success;
-  
+
   switch (stepIndex) {
     case 0: // Basic Info - always accessible
       return true;
@@ -411,9 +420,9 @@ export const canAccessStep = (stepIndex: number, formData: any): boolean => {
 };
 
 // Helper function to check if step is completed
-export const isStepCompleted = (stepIndex: number, formData: any): boolean => {
+export const isStepCompleted = (stepIndex: number, formData: Partial<CompleteProductFormData>): boolean => {
   const isSimpleProduct = formData.productType === 'simple';
-  
+
   switch (stepIndex) {
     case 0:
       return validateStep.basic(formData).success;

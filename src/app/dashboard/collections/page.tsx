@@ -99,26 +99,32 @@ const CollectionsPage: React.FC = () => {
     {
       key: "name",
       label: "Collection Name",
-      render: (name: string, collection: Collection) => (
-        <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-500">/{collection.slug}</div>
-        </div>
-      ),
+      render: (value: unknown, collection: Collection) => {
+        const name = value as string;
+        return (
+          <div>
+            <div className="font-medium">{name}</div>
+            <div className="text-sm text-gray-500">/{collection.slug}</div>
+          </div>
+        );
+      },
     },
     {
       key: "productCount",
       label: "Products",
-      render: (count: number) => (
-        <Badge variant={count > 0 ? "default" : "secondary"}>
-          {count}
-        </Badge>
-      ),
+      render: (value: unknown) => {
+        const count = value as number;
+        return (
+          <Badge variant={count > 0 ? "default" : "secondary"}>
+            {count}
+          </Badge>
+        );
+      },
     },
     {
       key: "createdAt",
       label: "Created",
-      render: renderDate,
+      render: (value: unknown) => renderDate(value as Date | string | null),
     },
   ];
 
@@ -151,14 +157,14 @@ const CollectionsPage: React.FC = () => {
         </div>
       </PageHeader>
 
-      <DataTable
+      {/* <DataTable
         data={filteredCollections}
         columns={columns}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
         emptyMessage="No collections found. Create your first collection to group related products."
-      />
+      /> */}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t">

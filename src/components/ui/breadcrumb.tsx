@@ -1,8 +1,10 @@
+// src/components/breadcrumb.tsx 
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { ChevronRight, MoreHorizontal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
@@ -35,10 +37,11 @@ function BreadcrumbLink({
   asChild,
   className,
   ...props
-}: React.ComponentProps<"a"> & {
+}: Omit<React.ComponentProps<"a">, "href"> & {
   asChild?: boolean
+  href: string
 }) {
-  const Comp = asChild ? Slot : "a"
+  const Comp = asChild ? Slot : Link
 
   return (
     <Comp

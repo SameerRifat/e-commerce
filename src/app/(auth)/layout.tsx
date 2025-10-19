@@ -3,12 +3,14 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/actions";
 
+// Mark this layout as dynamic since it uses headers() for auth
+export const dynamic = 'force-dynamic';
+
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  // Check if user is already logged in
+  // This now works without build errors
   const user = await getCurrentUser();
 
   if (user) {
-    // Redirect logged-in users to appropriate page
     if (user.role === "admin") {
       redirect("/dashboard");
     } else {
@@ -20,17 +22,14 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     <main className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left Section - Brand Experience */}
       <section className="hidden lg:flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-10">
-        {/* Decorative Elements */}
+        {/* All your decorative content... */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#E47F1A]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#E47F1A]/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
 
-        {/* Subtle Grid Pattern Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem]" />
 
-        {/* Content Layer */}
         <div className="relative z-10 flex flex-col justify-between h-full">
-          {/* Logo */}
           <div className="flex items-center">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-[#E47F1A] to-amber-600 inline-flex items-center justify-center shadow-2xl shadow-[#E47F1A]/50 ring-1 ring-white/10">
               <Image
@@ -43,7 +42,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             </div>
           </div>
 
-          {/* Main Content - Centered */}
           <div className="space-y-8 max-w-lg">
             <div className="inline-block px-5 py-2 bg-white/5 backdrop-blur-xl rounded-full border border-[#E47F1A]/30 shadow-lg">
               <span className="text-sm font-medium text-[#E47F1A]">
@@ -63,7 +61,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
               cosmetics, and personalized beauty solutions.
             </p>
 
-            {/* Feature Pills */}
             <div className="flex flex-wrap gap-3 pt-4">
               <div className="flex items-center gap-2 px-5 py-3 bg-white/5 backdrop-blur-xl rounded-full border border-white/10 hover:border-[#E47F1A]/40 transition-all duration-300 group">
                 <div className="w-2 h-2 rounded-full bg-[#E47F1A] group-hover:scale-110 transition-transform shadow-sm shadow-[#E47F1A]/50" />
@@ -80,7 +77,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-500">© 2025 Your Brand. All rights reserved.</p>
             <div className="flex gap-3">

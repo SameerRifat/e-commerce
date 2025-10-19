@@ -19,6 +19,7 @@ export interface CartItemWithDetails {
   product?: {
     id: string;
     name: string;
+    slug: string; // ADDED
     description: string;
     price: string;
     salePrice: string | null;
@@ -40,6 +41,7 @@ export interface CartItemWithDetails {
     product: {
       id: string;
       name: string;
+      slug: string; // ADDED
       description: string;
     };
     color: {
@@ -141,6 +143,7 @@ export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: 
           .select({
             id: products.id,
             name: products.name,
+            slug: products.slug, // ADDED
             description: products.description,
             price: products.price,
             salePrice: products.salePrice,
@@ -179,6 +182,7 @@ export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: 
           product: {
             id: product.id,
             name: product.name,
+            slug: product.slug, // ADDED
             description: product.description,
             price: product.price || "0",
             salePrice: product.salePrice,
@@ -207,6 +211,7 @@ export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: 
             // Product fields
             productId: products.id,
             productName: products.name,
+            productSlug: products.slug, // ADDED
             productDescription: products.description,
 
             // Color fields
@@ -255,7 +260,7 @@ export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: 
         cartItemsWithDetails.push({
           id: cartItem.id,
           cartId: cartItem.cartId,
-          productId: variant.productId, // Use the actual product ID
+          productId: variant.productId,
           productVariantId: cartItem.productVariantId,
           isSimpleProduct: false,
           quantity: cartItem.quantity,
@@ -268,6 +273,7 @@ export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: 
             product: {
               id: variant.productId,
               name: variant.productName,
+              slug: variant.productSlug, // ADDED
               description: variant.productDescription,
             },
             color: variant.colorId ? {
@@ -310,7 +316,7 @@ export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: 
 
 // Add item to cart - supports both simple and configurable products
 const addCartItemSchema = z.object({
-  productId: z.string().uuid().optional(), // Keep optional for backwards compatibility
+  productId: z.string().uuid().optional(),
   productVariantId: z.string().uuid().optional(),
   isSimpleProduct: z.boolean().default(false),
   quantity: z.number().int().min(1).default(1),
@@ -321,7 +327,6 @@ const addCartItemSchema = z.object({
       return data.productId && !data.productVariantId;
     }
     // For configurable products: both productId and productVariantId should be provided
-    // This ensures we can track which product the variant belongs to
     else {
       return data.productId && data.productVariantId;
     }
@@ -338,7 +343,6 @@ export async function addCartItem(data: z.infer<typeof addCartItemSchema>) {
 
     if (validatedData.isSimpleProduct && validatedData.productId) {
       // Handle simple product
-      // Check if item already exists in cart
       const existingItem = await db.query.cartItems.findFirst({
         where: and(
           eq(cartItems.cartId, cart.id),
@@ -365,7 +369,6 @@ export async function addCartItem(data: z.infer<typeof addCartItemSchema>) {
       }
     } else if (!validatedData.isSimpleProduct && validatedData.productVariantId && validatedData.productId) {
       // Handle configurable product variant
-      // Check if item already exists in cart
       const existingItem = await db.query.cartItems.findFirst({
         where: and(
           eq(cartItems.cartId, cart.id),
@@ -381,10 +384,10 @@ export async function addCartItem(data: z.infer<typeof addCartItemSchema>) {
           .set({ quantity: existingItem.quantity + validatedData.quantity })
           .where(eq(cartItems.id, existingItem.id));
       } else {
-        // Add new item - NOW INCLUDING PRODUCT_ID!
+        // Add new item with productId
         await db.insert(cartItems).values({
           cartId: cart.id,
-          productId: validatedData.productId, // This was missing!
+          productId: validatedData.productId,
           productVariantId: validatedData.productVariantId,
           isSimpleProduct: false,
           quantity: validatedData.quantity,

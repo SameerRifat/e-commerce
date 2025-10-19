@@ -6,20 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { 
-  CheckCircle, 
-  Truck, 
-  MapPin, 
-  CreditCard, 
-  ShoppingBag, 
+import {
+  CheckCircle,
+  MapPin,
+  CreditCard,
+  ShoppingBag,
   Calendar,
   Package,
-  Clock,
-  Mail,
   ChevronRight
 } from 'lucide-react';
 import { OrderWithDetails } from '@/lib/actions/orders';
-import { formatPrice, generateOrderNumber, estimateDeliveryDate, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/utils/order-helpers';
+import { formatPrice, generateOrderNumber, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/utils/order-helpers';
 
 interface OrderConfirmationProps {
   order: OrderWithDetails;
@@ -27,9 +24,14 @@ interface OrderConfirmationProps {
 
 export function OrderConfirmation({ order }: OrderConfirmationProps) {
   const orderNumber = generateOrderNumber(order.id);
-  const estimatedDelivery = estimateDeliveryDate();
 
-  const formatAddress = (address: any) => {
+  const formatAddress = (address: {
+    line1?: string | null;
+    line2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+  } | null | undefined) => {
     if (!address) return 'N/A';
     const parts = [
       address.line1,
@@ -40,6 +42,8 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
     return parts.join(', ');
   };
 
+  console.log('order items: ', order.items)
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Success Header - Enhanced */}
@@ -49,14 +53,14 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-3">Order Confirmed!</h1>
         <p className="text-lg text-gray-600 mb-6">
-          Thank you for your order. We've received your order and will process it shortly.
+          Thank you for your order. We&apos;ve received your order and will process it shortly.
         </p>
-        
+
         {/* Key Order Info */}
         <div className="inline-flex items-center gap-6 bg-white rounded-lg px-6 py-3 shadow-sm border">
           <div className="flex items-center gap-2 text-sm">
             <Package className="w-4 h-4 text-gray-500" />
-            <span className="font-medium">Order #{orderNumber}</span>
+            <span className="font-medium">Order #<Link href={`/profile/orders/${order.id}`}>{orderNumber}</Link></span>
           </div>
           <div className="w-px h-4 bg-gray-300"></div>
           <div className="flex items-center gap-2 text-sm">
@@ -118,16 +122,21 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
-                          {item.isSimpleProduct && item.product 
-                            ? item.product.name 
-                            : item.variant?.product.name || 'Unknown Product'}
+                          <Link
+                            href={`/products/${item.isSimpleProduct ? item.product?.slug : item.variant?.product.slug}`}
+                            className="font-medium text-gray-900 hover:text-primary transition-colors line-clamp-2 text-sm block mb-1"
+                          >
+                            {item.isSimpleProduct && item.product
+                              ? item.product.name
+                              : item.variant?.product.name || 'Unknown Product'}
+                          </Link>
                         </h3>
-                        
+
                         {/* Variant Details - Simplified */}
                         <div className="flex items-center gap-2 mb-1 text-xs text-gray-600">
                           {item.variant?.color && (
                             <div className="flex items-center gap-1">
-                              <div 
+                              <div
                                 className="w-3 h-3 rounded-full border border-gray-200"
                                 style={{ backgroundColor: item.variant.color.hexCode }}
                               />
@@ -186,21 +195,21 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
                   <span className="text-gray-600">Subtotal</span>
                   <span>{formatPrice(parseFloat(order.subtotal.toString()))}</span>
                 </div>
-                
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className={parseFloat(order.shippingCost.toString()) === 0 ? 'text-green-600' : ''}>
                     {parseFloat(order.shippingCost.toString()) === 0 ? 'Free' : formatPrice(parseFloat(order.shippingCost.toString()))}
                   </span>
                 </div>
-                
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax</span>
                   <span>{formatPrice(parseFloat(order.taxAmount.toString()))}</span>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>
                   <span className="text-lg">{formatPrice(parseFloat(order.totalAmount.toString()))}</span>
@@ -211,7 +220,7 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
 
           {/* Shipping & Payment - Combined */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="space-y-4">
                 {/* Shipping Address */}
                 <div>
@@ -239,9 +248,9 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
                   </div>
                   <div className="pl-6 text-sm text-gray-600">
                     <div>
-                      {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 
-                       order.paymentMethod === 'jazzcash' ? 'JazzCash' :
-                       order.paymentMethod === 'easypaisa' ? 'EasyPaisa' : 'Unknown'}
+                      {order.paymentMethod === 'cod' ? 'Cash on Delivery' :
+                        order.paymentMethod === 'jazzcash' ? 'JazzCash' :
+                          order.paymentMethod === 'easypaisa' ? 'EasyPaisa' : 'Unknown'}
                     </div>
                     <div className="text-xs text-gray-500">
                       Total: {formatPrice(parseFloat(order.totalAmount.toString()))}
@@ -269,7 +278,7 @@ export function OrderConfirmation({ order }: OrderConfirmationProps) {
 
           {/* Support - Minimal */}
           {/* <Card className="bg-gray-50">
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="text-center">
                 <Mail className="w-5 h-5 text-gray-400 mx-auto mb-2" />
                 <p className="text-xs text-gray-600">

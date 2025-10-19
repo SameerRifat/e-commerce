@@ -1,6 +1,4 @@
-// ============================================
 // src/components/home/HeroSection.tsx
-// ============================================
 import React from "react";
 import HeroCarousel from "@/components/home/hero-carousel";
 import type { HeroSlide } from "@/components/home/hero-carousel";

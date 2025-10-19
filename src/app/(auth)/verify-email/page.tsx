@@ -1,12 +1,17 @@
 // src/app/(auth)/verify-email/page.tsx
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-async function VerifyContent({ searchParams }: { searchParams: { token?: string; error?: string } }) {
-    const { token, error } = searchParams;
+async function VerifyContent({ 
+    searchParams 
+}: { 
+    searchParams: Promise<{ token?: string; error?: string }> 
+}) {
+    // Await the searchParams promise
+    const params = await searchParams;
+    const { error } = params;
 
     if (error) {
         return (
@@ -48,10 +53,10 @@ async function VerifyContent({ searchParams }: { searchParams: { token?: string;
     );
 }
 
-export default function VerifyEmailPage({
+export default async function VerifyEmailPage({
     searchParams,
 }: {
-    searchParams: { token?: string; error?: string };
+    searchParams: Promise<{ token?: string; error?: string }>;
 }) {
     return (
         <Suspense fallback={<div>Loading...</div>}>

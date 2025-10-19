@@ -107,6 +107,7 @@ const BrandImageUpload: React.FC<BrandImageUploadProps> = ({
         <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 relative">
           {hasLogo ? (
             <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt="Brand logo preview"

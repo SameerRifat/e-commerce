@@ -74,7 +74,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
                                 >
                                     {profileTabs.map((tab) => {
                                         const Icon = tab.icon;
-                                        const isActive = activeTab === tab.value;
+                                        // const isActive = activeTab === tab.value;
 
                                         return (
                                             <TabsTrigger

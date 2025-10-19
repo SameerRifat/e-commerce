@@ -1,103 +1,121 @@
 // src/components/products/product-detail/reviews-section.tsx
 import CollapsibleSection from "@/components/CollapsibleSection";
-import { getProductReviews, Review } from "@/lib/actions/product";
+import { getProductReviews, checkUserReviewEligibility } from "@/lib/actions/reviews";
+import { getCurrentUser } from "@/lib/auth/actions";
 import { Star } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ReviewsHeader } from "./reviews-header";
+import { WriteReviewButton } from "./write-review-button";
+import { ReviewsList } from "./reviews-list";
 
-export default async function ReviewsSection({ productId }: { productId: string }) {
-    const reviews: Review[] = await getProductReviews(productId);
-    const count = reviews.length;
-    const avg = count > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / count) : 0;
+interface ReviewsSectionProps {
+  productId: string;
+  productName?: string;
+  productSlug?: string;
+}
 
+export default async function ReviewsSection({
+  productId,
+  productName,
+  productSlug,
+}: ReviewsSectionProps) {
+  // Get current user
+  const user = await getCurrentUser();
+
+  // Fetch initial reviews (page 1)
+  const result = await getProductReviews(productId, {
+    page: 1,
+    limit: 5,
+    sortBy: "recent",
+  });
+
+  if (!result.success) {
     return (
-        <CollapsibleSection
-            title={`Reviews (${count})`}
-            value="reviews"
-            rightMeta={
-                <span className="flex items-center gap-1 text-dark-900">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                        <Star
-                            key={i}
-                            className={`h-4 w-4 ${i <= Math.round(avg)
-                                    ? "fill-yellow-400 text-yellow-400"
-                                    : "fill-gray-300 text-gray-300"
-                                }`}
-                        />
-                    ))}
-                </span>
-            }
-        >
-            {reviews.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                    <p className="text-body">No reviews yet.</p>
-                    <p className="text-caption mt-2">Be the first to review this product!</p>
-                </div>
-            ) : (
-                <ul className="space-y-4">
-                    {reviews.slice(0, 10).map((r) => (
-                        <li key={r.id}>
-                            <Card className="shadow-sm hover:shadow-md transition-shadow">
-                                <CardContent className="p-4">
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <div>
-                                            <p className="text-body-medium font-semibold text-dark-900">{r.author}</p>
-                                            <p className="text-caption text-gray-500">
-                                                {new Date(r.createdAt).toLocaleDateString('en-US', {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                })}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            {[1, 2, 3, 4, 5].map((i) => (
-                                                <Star
-                                                    key={i}
-                                                    className={`h-4 w-4 ${i <= r.rating
-                                                            ? "fill-yellow-400 text-yellow-400"
-                                                            : "fill-gray-300 text-gray-300"
-                                                        }`}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {r.title && (
-                                        <h4 className="text-body-medium font-semibold text-dark-900 mb-2">
-                                            {r.title}
-                                        </h4>
-                                    )}
-
-                                    {r.content && (
-                                        <p className="text-body text-dark-700 line-clamp-[8]">
-                                            {r.content}
-                                        </p>
-                                    )}
-
-                                    {/* Verified Purchase Badge (if applicable) */}
-                                    {/* {r.verified && (
-                                        <div className="mt-3">
-                                            <Badge variant="secondary" className="text-xs">
-                                                ✓ Verified Purchase
-                                            </Badge>
-                                        </div>
-                                    )} */}
-                                </CardContent>
-                            </Card>
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            {/* Show message if there are more reviews */}
-            {reviews.length > 10 && (
-                <div className="mt-6 text-center">
-                    <p className="text-caption text-gray-500">
-                        Showing 10 of {reviews.length} reviews
-                    </p>
-                </div>
-            )}
-        </CollapsibleSection>
+      <CollapsibleSection title="Reviews" value="reviews">
+        <div className="text-center py-8 text-gray-500">
+          <p className="text-body">Failed to load reviews.</p>
+        </div>
+      </CollapsibleSection>
     );
+  }
+
+  const { reviews = [], stats, pagination } = result;
+  const totalReviews = stats?.totalReviews || 0;
+  const averageRating = stats?.averageRating || 0;
+
+  // ✅ Always check eligibility if user is authenticated
+  let userEligibility = null;
+  if (user) {
+    const eligibilityResult = await checkUserReviewEligibility(productId);
+    if (eligibilityResult.success) {
+      userEligibility = eligibilityResult.eligibility;
+    }
+  }
+
+  // ✅ NEW: Only show Write button if user hasn't reviewed yet
+  const shouldShowWriteButton = !!(user && 
+    productId && 
+    productName && 
+    userEligibility && 
+    userEligibility.canReview && 
+    !userEligibility.hasReview);
+
+  console.log('[ReviewsSection] reviews: ', JSON.stringify(reviews, null, 2))
+
+  return (
+    <CollapsibleSection
+      title={`Reviews (${totalReviews})`}
+      value="reviews"
+      rightMeta={
+        totalReviews > 0 && (
+          <span className="flex items-center gap-1 text-dark-900">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Star
+                key={i}
+                className={`h-4 w-4 ${
+                  i <= Math.round(averageRating)
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "fill-gray-300 text-gray-300"
+                }`}
+              />
+            ))}
+          </span>
+        )
+      }
+    >
+      <div className="space-y-6">
+        {/* 1. Reviews Header with Stats (if reviews exist) */}
+        {totalReviews > 0 && stats && (
+          <ReviewsHeader stats={stats} />
+        )}
+
+        {/* 2. Write Review Button - ONLY show if user hasn't reviewed yet */}
+        {shouldShowWriteButton && userEligibility && (
+          <WriteReviewButton
+            productId={productId}
+            productName={productName}
+            productSlug={productSlug}
+            eligibility={userEligibility}
+          />
+        )}
+
+        {/* 3. Reviews List or Empty State */}
+        {totalReviews === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-body">No reviews yet.</p>
+            <p className="text-caption mt-2">
+              Be the first to review this product!
+            </p>
+          </div>
+        ) : (
+          <ReviewsList
+            productId={productId}
+            productName={productName || "this product"}
+            initialReviews={reviews}
+            initialPagination={pagination!}
+            currentUserId={user?.id}
+          />
+        )}
+      </div>
+    </CollapsibleSection>
+  );
 }

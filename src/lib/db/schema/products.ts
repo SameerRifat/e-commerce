@@ -16,6 +16,7 @@ import { productCollections } from './collections';
 export const products = pgTable('products', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
   description: text('description').notNull(),
   categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
   genderId: uuid('gender_id').references(() => genders.id, { onDelete: 'set null' }),
@@ -51,7 +52,6 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.brandId],
     references: [brands.id],
   }),
-  // Add all missing relations
   variants: many(productVariants),
   images: many(productImages),
   reviews: many(reviews),
@@ -61,8 +61,29 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   productCollections: many(productCollections),
 }));
 
+// Helper function to generate slug from product name
+export function generateProductSlug(name: string, id?: string): string {
+  const baseSlug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')      // Replace spaces with hyphens
+    .replace(/-+/g, '-')       // Replace multiple hyphens with single
+    .substring(0, 100);        // Limit length
+  
+  // Optionally append short ID for uniqueness guarantee
+  if (id) {
+    const shortId = id.split('-')[0]; // First segment of UUID
+    return `${baseSlug}-${shortId}`;
+  }
+  
+  return baseSlug;
+}
+
+// Updated Zod schemas
 export const insertProductSchema = z.object({
   name: z.string().min(1),
+  slug: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'), // ADD THIS
   description: z.string().min(1),
   categoryId: z.string().uuid().optional().nullable(),
   genderId: z.string().uuid().optional().nullable(),
@@ -90,8 +111,10 @@ export const insertProductSchema = z.object({
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
+
 export const selectProductSchema = insertProductSchema.extend({
   id: z.string().uuid(),
 });
+
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type SelectProduct = z.infer<typeof selectProductSchema>;

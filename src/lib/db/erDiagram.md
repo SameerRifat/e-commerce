@@ -116,6 +116,7 @@ erDiagram
     products {
         uuid id PK
         text name
+        text slug UK
         text description
         uuid category_id FK
         uuid gender_id FK

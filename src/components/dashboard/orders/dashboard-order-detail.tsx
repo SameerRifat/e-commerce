@@ -39,6 +39,7 @@ import {
   Truck,
   XCircle,
   AlertCircle,
+  LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderWithDetails } from '@/lib/actions/orders';
@@ -56,17 +57,30 @@ interface DashboardOrderDetailProps {
   order: OrderWithDetails;
 }
 
+type OrderStatus = 'pending' | 'processing' | 'paid' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
+
+interface AddressData {
+  line1?: string;
+  line2?: string | null;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  phone?: string | null;
+}
+
 export function DashboardOrderDetail({ order: initialOrder }: DashboardOrderDetailProps) {
   const router = useRouter();
   const [order, setOrder] = useState<OrderWithDetails>(initialOrder);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  console.log('order: ', JSON.stringify(order, null, 2))
+
   const orderNumber = generateOrderNumber(order.id);
   const timeline = getOrderTimeline(order.paymentMethod);
 
-  const getStatusIcon = (status: string) => {
-    const icons: Record<string, any> = {
+  const getStatusIcon = (status: string): LucideIcon => {
+    const icons: Record<string, LucideIcon> = {
       delivered: CheckCircle2,
       out_for_delivery: Truck,
       shipped: Truck,
@@ -78,7 +92,7 @@ export function DashboardOrderDetail({ order: initialOrder }: DashboardOrderDeta
     return icons[status] || Clock;
   };
 
-  const formatAddress = (address: any) => {
+  const formatAddress = (address: AddressData | null | undefined): string => {
     if (!address) return 'N/A';
     const parts = [
       address.line1,
@@ -100,7 +114,7 @@ export function DashboardOrderDetail({ order: initialOrder }: DashboardOrderDeta
     }).format(new Date(date));
   };
 
-  const handleStatusUpdate = async (newStatus: any) => {
+  const handleStatusUpdate = async (newStatus: OrderStatus) => {
     setIsUpdating(true);
     try {
       const result = await updateDashboardOrderStatus(order.id, newStatus);
@@ -111,7 +125,7 @@ export function DashboardOrderDetail({ order: initialOrder }: DashboardOrderDeta
       } else {
         toast.error(result.error || 'Failed to update status');
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred');
     } finally {
       setIsUpdating(false);
@@ -128,7 +142,7 @@ export function DashboardOrderDetail({ order: initialOrder }: DashboardOrderDeta
       } else {
         toast.error(result.error || 'Failed to delete order');
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred');
     }
   };
@@ -139,7 +153,7 @@ export function DashboardOrderDetail({ order: initialOrder }: DashboardOrderDeta
     <div className="space-y-6">
       {/* Order Header */}
       <Card className="border-l-4 border-l-primary">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">

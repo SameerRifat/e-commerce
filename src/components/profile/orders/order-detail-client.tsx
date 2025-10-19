@@ -1,5 +1,4 @@
 // src/components/profile/orders/order-detail-client.tsx
-
 'use client';
 
 import { useState } from 'react';
@@ -23,14 +22,13 @@ import {
     Phone,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { OrderWithDetails } from '@/lib/actions/orders';
+import { OrderStatus, OrderWithDetails } from '@/lib/actions/orders';
 import {
     formatPrice,
     generateOrderNumber,
     estimateDeliveryDate,
     ORDER_STATUS_LABELS,
     ORDER_STATUS_COLORS,
-    ORDER_STATUS_DESCRIPTIONS,
     getOrderTimeline,
     getNextAction,
 } from '@/lib/utils/order-helpers';
@@ -41,8 +39,9 @@ interface OrderDetailClientProps {
     order: OrderWithDetails;
 }
 
+type AddressType = NonNullable<OrderWithDetails['shippingAddress']>;
+
 export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProps) => { 
-    console.log('initialOrder: ', JSON.stringify(initialOrder, null, 2));
     const [order, setOrder] = useState<OrderWithDetails>(initialOrder);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -51,8 +50,8 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
     const timeline = getOrderTimeline(order.paymentMethod);
     const nextAction = getNextAction(order.status, order.paymentMethod);
 
-    const getStatusIcon = (status: string) => {
-        const icons: Record<string, any> = {
+    const getStatusIcon = (status: OrderStatus) => {
+        const icons: Record<OrderStatus, typeof CheckCircle2> = {
             delivered: CheckCircle2,
             shipped: Truck,
             out_for_delivery: Truck,
@@ -64,7 +63,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
         return icons[status] || Clock;
     };
 
-    const formatAddress = (address: any) => {
+    const formatAddress = (address: AddressType) => {
         if (!address) return 'N/A';
         const parts = [
             address.line1,
@@ -98,19 +97,21 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
             } else {
                 toast.error(result.error || 'Failed to cancel order');
             }
-        } catch (error) {
+        } catch (err) {
             toast.error('An unexpected error occurred');
-            console.error('Cancel order error:', error);
+            console.error('Cancel order error:', err);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleReorder = async (order: OrderWithDetails) => {
+    const handleReorder = async () => {
         try {
+            // TODO: Implement reorder functionality
             toast.success('Items added to cart');
-        } catch (error) {
+        } catch (err) {
             toast.error('Failed to add items to cart');
+            console.error('Reorder error:', err);
         }
     };
 
@@ -118,9 +119,9 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
-            {/* Success Header - Cleaner Design */}
+            {/* Success Header */}
             <Card className="border-l-4 border-l-primary">
-                <CardContent className="pt-6">
+                <CardContent>
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -170,7 +171,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Order Items */}
+                    {/* Order Items - UPDATED WITH REVIEW INTEGRATION */}
                     <Card>
                         <CardHeader className="pb-4">
                             <CardTitle className="flex items-center justify-between">
@@ -186,14 +187,19 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                         <CardContent className="pt-0 space-y-3">
                             {order.items.map((item, index) => (
                                 <div key={item.id}>
-                                    <OrderItemDisplay item={item} showFullDetails={true} />
+                                    {/* ✅ PASS orderStatus prop for review button */}
+                                    <OrderItemDisplay 
+                                        item={item} 
+                                        showFullDetails={true}
+                                        orderStatus={order.status}
+                                    />
                                     {index < order.items.length - 1 && <Separator className="my-3" />}
                                 </div>
                             ))}
                         </CardContent>
                     </Card>
 
-                    {/* Order Timeline - Enhanced */}
+                    {/* Order Timeline */}
                     {order.status !== 'cancelled' && (
                         <Card>
                             <CardHeader className="pb-4">
@@ -211,7 +217,6 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
 
                                         return (
                                             <div key={stage.status} className="relative flex gap-4">
-                                                {/* Timeline Line */}
                                                 {!isLast && (
                                                     <div
                                                         className={`absolute left-[15px] top-8 w-0.5 h-full ${
@@ -220,7 +225,6 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                                                     />
                                                 )}
 
-                                                {/* Status Indicator */}
                                                 <div className="relative z-10">
                                                     <div
                                                         className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
@@ -241,7 +245,6 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                                                     </div>
                                                 </div>
 
-                                                {/* Stage Info */}
                                                 <div className="flex-1 pb-6">
                                                     <div
                                                         className={`font-semibold ${
@@ -302,11 +305,11 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                     )}
                 </div>
 
-                {/* Right Column */}
+                {/* Right Column - SAME AS BEFORE */}
                 <div className="space-y-6">
                     {/* Order Summary */}
                     <Card>
-                        <CardHeader className="pb-4">
+                        <CardHeader>
                             <CardTitle className="text-lg">Order Summary</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 space-y-3">
@@ -339,7 +342,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                     {/* Shipping Address */}
                     {order.shippingAddress && (
                         <Card>
-                            <CardHeader className="pb-4">
+                            <CardHeader>
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <MapPin className="w-4 h-4" />
                                     Shipping Address
@@ -362,10 +365,10 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                         </Card>
                     )}
 
-                    {/* Billing Address - Only if different */}
+                    {/* Billing Address */}
                     {order.billingAddress && order.billingAddress.id !== order.shippingAddress?.id && (
                         <Card>
-                            <CardHeader className="pb-4">
+                            <CardHeader>
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <CreditCard className="w-4 h-4" />
                                     Billing Address
@@ -390,7 +393,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
 
                     {/* Payment Method */}
                     <Card>
-                        <CardHeader className="pb-4">
+                        <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
                                 <CreditCard className="w-4 h-4" />
                                 Payment
@@ -421,7 +424,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
 
                     {/* Order Actions */}
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent>
                             <OrderActions
                                 order={order}
                                 onCancel={handleCancelOrder}
@@ -429,9 +432,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
                                 isLoading={isLoading}
                             />
 
-                            <Separator className="my-4" />
-
-                            <Button asChild variant="outline" size="lg" className="w-full">
+                            <Button asChild variant="outline" size="lg" className="w-full mt-4">
                                 <Link href="/profile/orders">
                                     View All Orders
                                     <ChevronRight className="w-4 h-4 ml-2" />
@@ -442,7 +443,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
 
                     {/* Help Section */}
                     <Card className="bg-gray-50">
-                        <CardContent className="pt-6">
+                        <CardContent>
                             <div className="text-center space-y-2">
                                 <Info className="w-5 h-5 text-gray-400 mx-auto" />
                                 <p className="text-sm text-gray-600">

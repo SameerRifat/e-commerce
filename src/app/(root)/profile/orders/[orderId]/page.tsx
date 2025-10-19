@@ -98,7 +98,7 @@ function OrderError({ message }: { message: string }) {
   return (
     <div className="max-w-2xl mx-auto text-center py-16">
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="text-center py-8">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Order</h3>

@@ -2,7 +2,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { UseFormReturn } from "react-hook-form";
+import { UseFormReturn, FieldPath } from "react-hook-form";
 import {
   validateStep,
   canAccessStep,
@@ -166,14 +166,14 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
 
   // Validate specific field
   const validateField = useCallback(async (fieldName: string): Promise<boolean> => {
-    const result = await form.trigger(fieldName as any);
+    const result = await form.trigger(fieldName as FieldPath<CompleteProductFormData>);
     return result;
   }, [form]);
 
   // Validate current step
   const validateCurrentStep = useCallback(async (): Promise<boolean> => {
     const isSimpleProduct = formData.productType === 'simple';
-    let fieldsToValidate: string[] = [];
+    let fieldsToValidate: FieldPath<CompleteProductFormData>[] = [];
 
     switch (currentStep) {
       case 0: // Basic Info
@@ -201,7 +201,7 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
     if (fieldsToValidate.length === 0) return true;
 
     const results = await Promise.all(
-      fieldsToValidate.map(field => form.trigger(field as any))
+      fieldsToValidate.map(field => form.trigger(field))
     );
 
     return results.every(result => result);

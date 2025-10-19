@@ -2,7 +2,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import ResetPasswordForm from "@/components/auth/reset-password-form";
 import { resetPassword } from "@/lib/auth/actions";
 import { XCircle, Loader2 } from "lucide-react";
@@ -11,7 +11,6 @@ import Link from "next/link";
 
 function ResetPasswordContent() {
     const searchParams = useSearchParams();
-    const router = useRouter();
     const [token, setToken] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 

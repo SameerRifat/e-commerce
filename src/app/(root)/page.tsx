@@ -1,73 +1,41 @@
 // src/app/(root)/page.tsx
-import React from "react";
-import { getCurrentUser } from "@/lib/auth/actions";
-import { getAllProducts } from "@/lib/actions/product";
-import { getActiveHeroSlides } from "@/lib/actions/hero-slides";
-import { getHomepageCategories } from "@/lib/actions/homepage-categories";
-import HeroSection from "@/components/home/hero-section";
-import LatestProductsSection from "@/components/home/latest-products";
-import CategoriesSection from "@/components/home/categories-section";
-import { HeroSlide } from "@/components/home/hero-carousel";
-import { getHeroSlideLink } from "@/lib/utils/hero-slides";
+import { Suspense } from "react";
+import { HeroSectionData } from "./_components/hero-section-data";
+import { CategoriesSectionData } from "./_components/categories-section-data";
+import { LatestProductsSectionData } from "./_components/latest-products-section-data";
 import FeaturesSection from "@/components/home/features-section";
+import { HeroSkeleton } from "@/components/loading/hero-skeleton";
+import { CategoriesSkeleton } from "@/components/loading/categories-skeleton";
+import { ProductsSkeleton } from "@/components/loading/products-skeleton";
+import { HeroErrorBoundary } from "./error-boundaries/hero-error-boundary";
+import { SectionErrorBoundary } from "./error-boundaries/section-error-boundary";
 
-const Home = async () => {
-  const user = await getCurrentUser();
-  
-  // Parallel data fetching for optimal performance
-  const [
-    { products },
-    heroSlidesData,
-    categories
-  ] = await Promise.all([
-    getAllProducts({ limit: 4 }),
-    getActiveHeroSlides(),
-    getHomepageCategories()
-  ]);
-
-  // Transform hero slides to carousel format
-  const desktopHeroSlides: HeroSlide[] = heroSlidesData.map((slide) => ({
-    type: slide.desktopMediaType as 'image' | 'video',
-    src: slide.desktopMediaUrl,
-    linkUrl: getHeroSlideLink(slide),
-    altText: slide.altText || undefined,
-  }));
-
-  const mobileHeroSlides: HeroSlide[] = heroSlidesData.map((slide) => ({
-    type: slide.mobileMediaType as 'image' | 'video',
-    src: slide.mobileMediaUrl,
-    linkUrl: getHeroSlideLink(slide),
-    altText: slide.altText || undefined,
-  }));
-
-  // Fallback to static slides if no database slides exist
-  const hasSlides = desktopHeroSlides.length > 0;
-
-  const finalDesktopSlides = hasSlides ? desktopHeroSlides : [
-    {
-      type: 'image' as const,
-      src: '/hero-banners/1.webp',
-    },
-  ];
-
-  const finalMobileSlides = hasSlides ? mobileHeroSlides : [
-    {
-      type: 'image' as const,
-      src: '/hero-banners/mobile-1.webp',
-    },
-  ];
-
+export default function Home() {
   return (
     <>
-      <HeroSection
-        desktopSlides={finalDesktopSlides}
-        mobileSlides={finalMobileSlides}
-      />
-      <CategoriesSection categories={categories} />
-      <LatestProductsSection products={products} />
+      {/* Hero Section - Independent loading with error boundary */}
+      <HeroErrorBoundary>
+        <Suspense fallback={<HeroSkeleton />}>
+          <HeroSectionData />
+        </Suspense>
+      </HeroErrorBoundary>
+
+      {/* Categories Section - Independent loading with error boundary */}
+      <SectionErrorBoundary title="Failed to load categories">
+        <Suspense fallback={<CategoriesSkeleton />}>
+          <CategoriesSectionData />
+        </Suspense>
+      </SectionErrorBoundary>
+
+      {/* Products Section - Independent loading with error boundary */}
+      <SectionErrorBoundary title="Failed to load products">
+        <Suspense fallback={<ProductsSkeleton />}>
+          <LatestProductsSectionData />
+        </Suspense>
+      </SectionErrorBoundary>
+
+      {/* Features Section - Static, no Suspense or error boundary needed */}
       <FeaturesSection />
     </>
   );
-};
-
-export default Home;
+}

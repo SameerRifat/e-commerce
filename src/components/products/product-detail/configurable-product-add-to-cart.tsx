@@ -1,4 +1,4 @@
-// src/components/ConfigurableProductAddToCart.tsx
+// src/components/products/product-detail/configurable-product-add-to-cart.tsx
 'use client';
 
 import { useState } from 'react';
@@ -16,12 +16,14 @@ type Variant = FullProduct['variants'][number];
 interface ConfigurableProductAddToCartProps {
   productId: string;
   productName: string;
+  productSlug: string;
   variants: Variant[];
 }
 
 export default function ConfigurableProductAddToCart({
   productId,
   productName,
+  productSlug,
   variants,
 }: ConfigurableProductAddToCartProps) {
   const { addItem, formatPrice, error, clearError, items } = useCartStore();
@@ -40,6 +42,7 @@ export default function ConfigurableProductAddToCart({
 
     return {
       name: productName,
+      slug: productSlug,
       price: parseFloat(selectedVariant.price),
       salePrice: selectedVariant.salePrice ? parseFloat(selectedVariant.salePrice) : undefined,
       image: undefined,
@@ -88,18 +91,22 @@ export default function ConfigurableProductAddToCart({
 
     const optimisticDetails = getOptimisticProductDetails();
 
-    toast.success(
-      <div className="flex items-center gap-2">
-        <Check className="h-4 w-4" />
-        <span>Added to cart!</span>
-      </div>
-    );
+    // ❌ REMOVED: Don't show success toast here
+    // toast.success(...)
 
     try {
       const success = await addItem(productId, selectedVariant.id, false, quantity, optimisticDetails);
 
-      if (!success) {
-        toast.error('Failed to add item to cart. Your cart has been restored.');
+      if (success) {
+        // ✅ Show success toast ONLY after server confirms
+        toast.success(
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            <span>Added to cart!</span>
+          </div>
+        );
+      } else {
+        toast.error('Failed to add item to cart. Please try again.');
       }
     } finally {
       setIsAdding(false);
@@ -281,7 +288,7 @@ export default function ConfigurableProductAddToCart({
         <Button
           onClick={handleAddToCart}
           disabled={!selectedVariant || selectedVariant.inStock === 0 || isAdding}
-          className="h-12 text-base font-medium"
+          className="h-12 text-base font-medium cursor-pointer"
           size="lg"
         >
           {isAdding ? (

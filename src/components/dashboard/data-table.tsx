@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   Table,
   TableBody,
@@ -24,7 +25,7 @@ import { cn } from "@/lib/utils";
 export interface Column<T> {
   key: keyof T | string;
   label: string;
-  render?: (value: any, item: T) => React.ReactNode;
+  render?: (value: unknown, item: T) => React.ReactNode;
   sortable?: boolean;
   className?: string;
 }
@@ -38,10 +39,10 @@ export interface DataTableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
-  isDeleting?: (item: T) => boolean; // Added this prop
+  isDeleting?: (item: T) => boolean;
 }
 
-function DataTable<T extends Record<string, any>>({
+function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   onEdit,
@@ -50,7 +51,7 @@ function DataTable<T extends Record<string, any>>({
   loading = false,
   emptyMessage = "No data available",
   className,
-  isDeleting, // Added this parameter
+  isDeleting,
 }: DataTableProps<T>) {
   const hasActions = onEdit || onDelete || onView;
 
@@ -100,7 +101,11 @@ function DataTable<T extends Record<string, any>>({
   const getCellValue = (item: T, key: keyof T | string) => {
     if (typeof key === 'string' && key.includes('.')) {
       // Handle nested keys like "brand.name"
-      return key.split('.').reduce((obj, k) => obj?.[k], item);
+      return key.split('.').reduce((obj: unknown, k) => {
+        return obj && typeof obj === 'object' && k in obj 
+          ? (obj as Record<string, unknown>)[k] 
+          : undefined;
+      }, item);
     }
     return item[key as keyof T];
   };
@@ -122,16 +127,16 @@ function DataTable<T extends Record<string, any>>({
           {data.map((item, index) => {
             const itemIsDeleting = isDeleting?.(item) || false;
             
-            return (
-              <TableRow key={item.id || index} className={itemIsDeleting ? "opacity-50" : ""}>
-                {columns.map((column) => {
-                  const value = getCellValue(item, column.key);
-                  return (
-                    <TableCell key={String(column.key)} className={column.className}>
-                      {column.render ? column.render(value, item) : value}
-                    </TableCell>
-                  );
-                })}
+              return (
+                <TableRow key={(item.id as string) || index} className={itemIsDeleting ? "opacity-50" : ""}>
+                  {columns.map((column) => {
+                    const value = getCellValue(item, column.key);
+                    return (
+                      <TableCell key={String(column.key)} className={column.className}>
+                        {column.render ? column.render(value, item) : String(value ?? '')}
+                      </TableCell>
+                    );
+                  })}
                 {hasActions && (
                   <TableCell>
                     <DropdownMenu>
@@ -184,16 +189,22 @@ export default DataTable;
 
 // Common render functions for reuse
 export const renderBadge = (
-  value: any,
+  value: unknown,
   variant: "default" | "secondary" | "destructive" | "outline" = "default"
 ) => (
-  <Badge variant={variant}>{value}</Badge>
+  <Badge variant={variant}>{String(value)}</Badge>
 );
 
 export const renderImage = (url: string | null, alt: string = "Image") => (
-  <div className="h-10 w-10 rounded-md overflow-hidden bg-gray-100">
+  <div className="h-10 w-10 rounded-md overflow-hidden bg-gray-100 relative">
     {url ? (
-      <img src={url} alt={alt} className="h-full w-full object-cover" />
+      <Image 
+        src={url} 
+        alt={alt} 
+        fill
+        className="object-cover"
+        sizes="40px"
+      />
     ) : (
       <div className="h-full w-full flex items-center justify-center">
         <span className="text-xs text-gray-400">

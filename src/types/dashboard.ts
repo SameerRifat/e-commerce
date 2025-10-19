@@ -1,5 +1,4 @@
 // src/types/dashboard.ts
-// Comprehensive TypeScript type definitions for dashboard components
 
 import type { ReactNode } from "react";
 
@@ -103,6 +102,7 @@ export interface ProductVariantListItem {
 export type ProductType = "simple" | "configurable";
 
 export interface Product extends BaseEntity {
+  id: string;
   name: string;
   description: string;
   productType: ProductType;
@@ -128,16 +128,39 @@ export interface DashboardProduct extends Product {
   images: ProductImage[];
 }
 
-export interface DashboardProductListItem extends Product {
+// Add index signature to make it compatible with DataTable's Record<string, unknown> requirement
+export interface DashboardProductListItem extends Record<string, unknown> {
+  id: string;
+  name: string;
+  description: string;
+  productType: ProductType;
+  isPublished: boolean;
+  createdAt: Date;
+  updatedAt: Date;
   brand: BrandListItem | null;
   category: CategoryListItem | null;
   gender: GenderListItem | null;
+  // Simple product fields
+  price?: string | null;
+  salePrice?: string | null;
+  sku?: string | null;
+  inStock?: number | null;
+  weight?: number | null;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  } | null;
   variants: ProductVariantListItem[];
   images: Array<{
     id: string;
     url: string;
     isPrimary: boolean;
   }>;
+
+  // ✅ NEW: Review metrics
+  reviewCount: number;
+  averageRating: number | null;
 }
 
 // Filter types
@@ -210,7 +233,7 @@ export interface DashboardPaginationProps {
 export interface DataTableColumn<T> {
   key: keyof T | string;
   label: string;
-  render?: (value: any, item: T) => ReactNode;
+  render?: (value: unknown, item: T) => ReactNode;
   sortable?: boolean;
   className?: string;
 }
@@ -232,7 +255,7 @@ export interface SearchParams {
 }
 
 // Utility types for server components
-export type ServerComponentProps<T = {}> = T & {
+export type ServerComponentProps<T = object> = T & {
   searchParams: SearchParams;
 };
 

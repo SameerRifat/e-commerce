@@ -4,38 +4,37 @@ import { AddressFormValues } from '@/lib/validations/address-validation';
 // Re-export the form values type
 export type { AddressFormValues };
 
-// Location types from react-country-state-city
+// Location types matching react-country-state-city library
+// These are the ACTUAL types returned by the library
 export interface Country {
   id: number;
   name: string;
   iso2: string;
   iso3: string;
   phonecode: string;
+  currency: string;
+  currency_name: string;
+  currency_symbol: string;
+  native: string;
+  region: string;
+  subregion: string;
+  emoji: string;
+  emojiU: string;
 }
 
 export interface State {
   id: number;
   name: string;
-  country_id: number;
-  country_code: string;
-  country_name: string;
   state_code: string;
-  type: string | null;
-  latitude: string;
-  longitude: string;
+  latitude: string | null;
+  longitude: string | null;
 }
 
 export interface City {
   id: number;
   name: string;
-  country_id: number;
-  country_code: string;
-  country_name: string;
-  state_id: number;
-  state_code: string;
-  state_name: string;
-  latitude: string;
-  longitude: string;
+  latitude: string | null;
+  longitude: string | null;
 }
 
 // Address type aligned with database schema

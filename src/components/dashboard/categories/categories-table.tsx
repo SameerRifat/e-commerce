@@ -16,13 +16,14 @@ import {
 import DataTable, { Column } from "@/components/dashboard/data-table";
 import { deleteCategory, type CategoryWithHierarchy } from "@/lib/actions/category-management";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface CategoriesTableProps {
   categories: CategoryWithHierarchy[];
 }
 
 // Display data type for the table
-interface CategoryDisplayData {
+interface CategoryDisplayData extends Record<string, unknown> {
   id: string;
   name: string;
   slug: string;
@@ -121,7 +122,8 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({ categories }) => {
     {
       key: "name",
       label: "Category Name",
-      render: (name: string, category: CategoryDisplayData) => {
+      render: (value: unknown, category: CategoryDisplayData) => {
+        const name = value as string;
         const indentation = (category.level - 1) * 20; // 20px per level
         return (
           <div className="flex items-center gap-2" style={{ paddingLeft: `${indentation}px` }}>
@@ -139,22 +141,26 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({ categories }) => {
             ) : (
               <div className="w-6 flex-shrink-0" />
             )}
-
+  
             {/* Category Image */}
             <div className="flex-shrink-0">
               {category.imageUrl ? (
-                <img
-                  src={category.imageUrl}
-                  alt={category.name}
-                  className="w-8 h-8 rounded object-cover"
-                />
+                <div className="relative w-8 h-8">
+                  <Image
+                    src={category.imageUrl}
+                    alt={category.name}
+                    fill
+                    className="rounded object-cover"
+                    sizes="32px"
+                  />
+                </div>
               ) : (
                 <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
                   <ImageIcon className="h-4 w-4 text-gray-400" />
                 </div>
               )}
             </div>
-
+  
             <div className="min-w-0 flex-1">
               <div className="font-medium truncate">{name}</div>
               <div className="text-sm text-gray-500">/{category.slug}</div>
@@ -166,11 +172,14 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({ categories }) => {
     {
       key: "path",
       label: "Full Path",
-      render: (path: string[]) => (
-        <div className="text-sm text-gray-600 max-w-xs truncate" title={path.join(" > ")}>
-          {path.join(" > ")}
-        </div>
-      ),
+      render: (value: unknown) => {
+        const path = value as string[];
+        return (
+          <div className="text-sm text-gray-600 max-w-xs truncate" title={path.join(" > ")}>
+            {path.join(" > ")}
+          </div>
+        );
+      },
     },
   ];
 

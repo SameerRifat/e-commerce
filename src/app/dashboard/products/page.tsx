@@ -5,14 +5,13 @@ import { Plus } from "lucide-react";
 import PageHeader from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
 import { getDashboardProducts, getDashboardFilterOptions } from "@/lib/actions/dashboard-products";
-import type { 
-  DashboardProductFilters,
-  PageProps
-} from "@/types/dashboard";
+import type { DashboardProductFilters } from "@/types/dashboard";
 import { DashboardFilters, ProductsTableWrapper } from "@/components/dashboard/products";
 import DashboardPagination from "@/components/dashboard/dashboard-pagination";
 
-type ProductsPageProps = PageProps;
+interface ProductsPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
 
 // Helper function to safely get string parameter
 function getStringParam(params: { [key: string]: string | string[] | undefined }, key: string): string | undefined {
@@ -54,8 +53,7 @@ const ProductsPage: React.FC<ProductsPageProps> = async ({ searchParams }) => {
       getDashboardFilterOptions(),
     ]);
 
-    const { products, totalCount, stats } = productsResult;
-
+    const { products, totalCount } = productsResult;
 
     return (
       <div className="space-y-6">

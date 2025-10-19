@@ -1,5 +1,4 @@
 // src/components/dashboard/products/ProductsTableWrapper.tsx
-
 "use client";
 
 import React from "react";
@@ -7,6 +6,7 @@ import { useRouter } from "next/navigation";
 import DataTable from "@/components/dashboard/data-table";
 import { renderImage, renderPrice, renderDate, renderBadge } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
 import type { DashboardProductListItem, DataTableColumn } from "@/types/dashboard";
 
 interface ProductsTableWrapperProps {
@@ -23,7 +23,6 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
   };
 
   const handleDelete = (product: DashboardProductListItem) => {
-    // This would typically trigger a confirmation dialog
     console.log("Delete product:", product.id);
     // TODO: Implement delete functionality
   };
@@ -32,12 +31,12 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
     router.push(`/dashboard/products/${product.id}`);
   };
 
-  // Define columns in the client component to avoid server/client boundary issues
   const columns: DataTableColumn<DashboardProductListItem>[] = [
     {
       key: "images",
       label: "Image",
-      render: (images: DashboardProductListItem["images"]) => {
+      render: (value: unknown, product: DashboardProductListItem) => {
+        const images = value as DashboardProductListItem["images"];
         const primaryImage = images.find((img) => img.isPrimary) || images[0];
         return renderImage(primaryImage?.url || null, "Product");
       },
@@ -46,33 +45,41 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
     {
       key: "name",
       label: "Product Name",
-      render: (name: string, product: DashboardProductListItem) => (
-        <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-500 truncate max-w-[200px]">
-            {product.description}
+      render: (value: unknown, product: DashboardProductListItem) => {
+        const name = value as string;
+        return (
+          <div>
+            <div className="font-medium">{name}</div>
+            <div className="text-sm text-gray-500 truncate max-w-[200px]">
+              {product.description}
+            </div>
+            <div className="text-xs text-blue-600 mt-1">
+              {product.productType === 'simple' ? 'Simple Product' : 'Configurable Product'}
+            </div>
           </div>
-          <div className="text-xs text-blue-600 mt-1">
-            {product.productType === 'simple' ? 'Simple Product' : 'Configurable Product'}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: "brand",
       label: "Brand",
-      render: (brand: DashboardProductListItem["brand"]) => brand?.name || "—",
+      render: (value: unknown) => {
+        const brand = value as DashboardProductListItem["brand"];
+        return brand?.name || "—";
+      },
     },
     {
       key: "category",
       label: "Category",
-      render: (category: DashboardProductListItem["category"]) => category?.name || "—",
+      render: (value: unknown) => {
+        const category = value as DashboardProductListItem["category"];
+        return category?.name || "—";
+      },
     },
     {
-      key: "price", // Changed from "variants" to "price"
+      key: "price",
       label: "Price",
-      render: (_: any, product: DashboardProductListItem) => {
-        // For simple products, show the direct price
+      render: (_value: unknown, product: DashboardProductListItem) => {
         if (product.productType === 'simple' && product.price) {
           const salePrice = product.salePrice ? parseFloat(product.salePrice) : null;
           const regularPrice = parseFloat(product.price);
@@ -92,7 +99,6 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
           return renderPrice(regularPrice);
         }
         
-        // For configurable products, show price range from variants
         if (!product.variants.length) return "—";
         const prices = product.variants.map((v) => parseFloat(v.price));
         const minPrice = Math.min(...prices);
@@ -105,9 +111,9 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
       },
     },
     {
-      key: "stock", // Changed from "variants" to "stock"
+      key: "stock",
       label: "Stock",
-      render: (_: any, product: DashboardProductListItem) => {
+      render: (_value: unknown, product: DashboardProductListItem) => {
         let totalStock = 0;
         
         if (product.productType === 'simple' && product.inStock !== null && product.inStock !== undefined) {
@@ -123,19 +129,61 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
         );
       },
     },
+    // ✅ NEW: Reviews Column
+    {
+      key: "reviews",
+      label: "Reviews",
+      render: (_value: unknown, product: DashboardProductListItem) => {
+        if (product.reviewCount === 0) {
+          return (
+            <span className="text-sm text-gray-400">No reviews</span>
+          );
+        }
+
+        const rating = product.averageRating || 0;
+
+        return (
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  className={`w-3.5 h-3.5 ${
+                    i <= Math.round(rating)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'fill-gray-300 text-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold">
+                {rating.toFixed(1)}
+              </span>
+              <span className="text-xs text-gray-500">
+                ({product.reviewCount})
+              </span>
+            </div>
+          </div>
+        );
+      },
+      className: "w-44",
+    },
     {
       key: "isPublished",
       label: "Status",
-      render: (isPublished: boolean) =>
-        renderBadge(
+      render: (value: unknown) => {
+        const isPublished = value as boolean;
+        return renderBadge(
           isPublished ? "Published" : "Draft",
           isPublished ? "default" : "secondary"
-        ),
+        );
+      },
     },
     {
       key: "updatedAt",
       label: "Updated",
-      render: renderDate,
+      render: (value: unknown) => renderDate(value as Date | string | null),
     },
   ];
 

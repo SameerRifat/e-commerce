@@ -18,10 +18,16 @@ export default async function AlsoLikeSection({ productId }: AlsoLikeSectionProp
                 {recs.map((p) => (
                     <ProductCard
                         key={p.id}
+                        id={p.id} // ✅ ADDED
+                        slug={p.slug} // ✅ ADDED - Critical fix!
                         title={p.title}
                         imageSrc={p.imageUrl}
+                        hoverImageSrc={p.hoverImageUrl} // ✅ ADDED
                         price={p.price ?? undefined}
-                        href={`/products/${p.id}`}
+                        salePrice={p.salePrice} // ✅ ADDED
+                        discountPercentage={p.discountPercentage} // ✅ ADDED
+                        averageRating={p.averageRating} // ✅ ADDED
+                        reviewCount={p.reviewCount} // ✅ ADDED
                     />
                 ))}
             </div>

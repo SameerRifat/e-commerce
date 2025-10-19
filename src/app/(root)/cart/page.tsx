@@ -1,3 +1,4 @@
+// src/app/(root)/cart/page.tsx
 import Link from "next/link";
 import { Suspense } from "react";
 import { getCart } from "@/lib/actions/cart";

@@ -1,12 +1,13 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import { Jost } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const jost = Jost({
-  variable: "--font-jost",
+const inter = Inter({
   subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
@@ -21,7 +22,7 @@ export default function RootShell({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jost.className} antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         {children}
         <Toaster position="top-right" richColors />
       </body>

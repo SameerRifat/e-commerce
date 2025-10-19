@@ -90,31 +90,40 @@ const SizesTable: React.FC<SizesTableProps> = ({
     {
       key: "sortOrder",
       label: "Order",
-      render: (sortOrder: number) => (
-        <Badge variant="outline" className="font-mono">
-          {sortOrder}
-        </Badge>
-      ),
+      render: (value: unknown) => {
+        const sortOrder = value as number;
+        return (
+          <Badge variant="outline" className="font-mono">
+            {sortOrder}
+          </Badge>
+        );
+      },
       className: "w-20",
     },
     {
       key: "name",
       label: "Size Name",
-      render: (name: string, size: SizeWithStats) => (
-        <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-500">/{size.slug}</div>
-        </div>
-      ),
+      render: (value: unknown, size: SizeWithStats) => {
+        const name = value as string;
+        return (
+          <div>
+            <div className="font-medium">{name}</div>
+            <div className="text-sm text-gray-500">/{size.slug}</div>
+          </div>
+        );
+      },
     },
     {
       key: "variantCount",
       label: "Used in Variants",
-      render: (count: number) => (
-        <Badge variant={count > 0 ? "default" : "secondary"}>
-          {count}
-        </Badge>
-      ),
+      render: (value: unknown) => {
+        const count = value as number;
+        return (
+          <Badge variant={count > 0 ? "default" : "secondary"}>
+            {count}
+          </Badge>
+        );
+      },
     },
   ];
 

@@ -1,6 +1,4 @@
-// ============================================
 // src/app/dashboard/hero-slides/[id]/edit/page.tsx
-// ============================================
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
 import HeroSlideForm from "@/components/dashboard/hero-slides/hero-slide-form";

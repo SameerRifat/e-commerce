@@ -18,6 +18,7 @@ import {
   type SelectBrand,
   type SelectCategory,
   type SelectGender,
+  reviews,
 } from "@/lib/db/schema";
 import type {
   DashboardProductListItem,
@@ -98,7 +99,7 @@ export async function getDashboardProducts(filters: DashboardProductFilters): Pr
       orderBy = desc(products.updatedAt);
   }
 
-  // Direct query with proper aliasing to avoid subquery issues
+  // ✅ OPTIMIZED: Single query with proper aliasing including reviews
   const productRows = await db
     .select({
       productId: products.id,
@@ -118,12 +119,41 @@ export async function getDashboardProducts(filters: DashboardProductFilters): Pr
       categorySlug: categories.slug,
       genderLabel: genders.label,
       genderSlug: genders.slug,
+      // ✅ NEW: Review aggregations
+      reviewCount: sql<number>`cast(count(distinct ${reviews.id}) as int)`,
+      averageRating: sql<number | null>`
+        case 
+          when count(distinct ${reviews.id}) > 0 
+          then round(avg(${reviews.rating})::numeric, 1)
+          else null 
+        end
+      `,
     })
     .from(products)
     .leftJoin(brands, eq(brands.id, products.brandId))
     .leftJoin(categories, eq(categories.id, products.categoryId))
     .leftJoin(genders, eq(genders.id, products.genderId))
+    .leftJoin(reviews, eq(reviews.productId, products.id)) // ✅ NEW: Join reviews
     .where(baseWhere)
+    .groupBy(
+      products.id,
+      products.name,
+      products.description,
+      products.productType,
+      products.isPublished,
+      products.price,
+      products.salePrice,
+      products.sku,
+      products.inStock,
+      products.createdAt,
+      products.updatedAt,
+      brands.name,
+      brands.slug,
+      categories.name,
+      categories.slug,
+      genders.label,
+      genders.slug
+    )
     .orderBy(orderBy, asc(products.id))
     .limit(limit)
     .offset(offset);
@@ -138,28 +168,29 @@ export async function getDashboardProducts(filters: DashboardProductFilters): Pr
 
   const productIds = productRows.map(p => p.productId);
 
-  // Get variants for these products
-  const variantRows = await db
-    .select({
-      productId: productVariants.productId,
-      variantId: productVariants.id,
-      variantPrice: productVariants.price,
-      variantSalePrice: productVariants.salePrice,
-      variantInStock: productVariants.inStock,
-    })
-    .from(productVariants)
-    .where(inArray(productVariants.productId, productIds));
-
-  // Get images for these products
-  const imageRows = await db
-    .select({
-      productId: productImages.productId,
-      imageId: productImages.id,
-      imageUrl: productImages.url,
-      imageIsPrimary: productImages.isPrimary,
-    })
-    .from(productImages)
-    .where(inArray(productImages.productId, productIds));
+  // ✅ OPTIMIZED: Fetch variants and images in parallel (only for products on current page)
+  const [variantRows, imageRows] = await Promise.all([
+    db
+      .select({
+        productId: productVariants.productId,
+        variantId: productVariants.id,
+        variantPrice: productVariants.price,
+        variantSalePrice: productVariants.salePrice,
+        variantInStock: productVariants.inStock,
+      })
+      .from(productVariants)
+      .where(inArray(productVariants.productId, productIds)),
+    
+    db
+      .select({
+        productId: productImages.productId,
+        imageId: productImages.id,
+        imageUrl: productImages.url,
+        imageIsPrimary: productImages.isPrimary,
+      })
+      .from(productImages)
+      .where(inArray(productImages.productId, productIds))
+  ]);
 
   // Get total count and stats in parallel
   const [countResult, statsResult] = await Promise.all([
@@ -224,27 +255,29 @@ export async function getDashboardProducts(filters: DashboardProductFilters): Pr
     category: row.categoryName ? { name: row.categoryName, slug: row.categorySlug! } : null,
     gender: row.genderLabel ? { label: row.genderLabel, slug: row.genderSlug! } : null,
     isPublished: row.isPublished,
-    productType: row.productType,
+    productType: row.productType as 'simple' | 'configurable',
     variants: (variantsByProduct.get(row.productId) || []).map(v => ({
       id: v.variantId,
       price: v.variantPrice,
       salePrice: v.variantSalePrice,
       inStock: v.variantInStock,
-      color: null, // Basic version, can be enhanced if needed
-      size: null, // Basic version, can be enhanced if needed
+      color: null,
+      size: null,
     })),
     images: (imagesByProduct.get(row.productId) || []).map(img => ({
       id: img.imageId,
       url: img.imageUrl,
       isPrimary: img.imageIsPrimary,
     })),
-    // Simple product fields
     price: row.productPrice,
     salePrice: row.productSalePrice,
     sku: row.productSku,
     inStock: row.productInStock,
     createdAt: row.productCreatedAt,
     updatedAt: row.productUpdatedAt,
+    // ✅ NEW: Review metrics
+    reviewCount: row.reviewCount,
+    averageRating: row.averageRating ? Number(row.averageRating) : null,
   }));
 
   return {
@@ -253,7 +286,6 @@ export async function getDashboardProducts(filters: DashboardProductFilters): Pr
     stats,
   };
 }
-
 export type DashboardProduct = {
   product: SelectProduct & {
     brand?: SelectBrand | null;
@@ -289,6 +321,7 @@ export async function getDashboardProduct(productId: string): Promise<DashboardP
       defaultVariantId: products.defaultVariantId,
       productCreatedAt: products.createdAt,
       productUpdatedAt: products.updatedAt,
+      productSlug: products.slug,
 
       brandId: brands.id,
       brandName: brands.name,
@@ -353,18 +386,19 @@ export async function getDashboardProduct(productId: string): Promise<DashboardP
   } = {
     id: head.productId,
     name: head.productName,
+    slug: head.productSlug,
     description: head.productDescription,
     brandId: head.productBrandId,
     categoryId: head.productCategoryId,
     genderId: head.productGenderId,
-    productType: head.productType,
+    productType: head.productType as 'simple' | 'configurable',
     isPublished: head.isPublished,
     price: head.productPrice,
     salePrice: head.productSalePrice,
     sku: head.productSku,
     inStock: head.productInStock,
     weight: head.productWeight,
-    dimensions: head.productDimensions,
+    dimensions: head.productDimensions as { length?: number; width?: number; height?: number } | null | undefined,
     defaultVariantId: head.defaultVariantId,
     createdAt: head.productCreatedAt,
     updatedAt: head.productUpdatedAt,
@@ -408,7 +442,7 @@ export async function getDashboardProduct(productId: string): Promise<DashboardP
         sizeId: r.variantSizeId,
         inStock: r.variantInStock!,
         weight: r.variantWeight,
-        dimensions: r.variantDimensions,
+        dimensions: r.variantDimensions as { length?: number; width?: number; height?: number } | null | undefined,
         createdAt: r.variantCreatedAt!,
         color: r.colorId ? {
           id: r.colorId,

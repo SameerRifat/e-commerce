@@ -93,33 +93,41 @@ const BrandsTable: React.FC<BrandsTableProps> = ({ brands }) => {
     {
       key: "logoUrl",
       label: "Logo",
-      render: (logoUrl: string | null, brand: BrandWithStats) => 
-        renderImage(logoUrl, brand.name),
+      render: (value: unknown, brand: BrandWithStats) => {
+        const logoUrl = value as string | null;
+        return renderImage(logoUrl, brand.name);
+      },
       className: "w-16",
     },
     {
       key: "name",
       label: "Brand Name",
-      render: (name: string, brand: BrandWithStats) => (
-        <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-500">/{brand.slug}</div>
-        </div>
-      ),
+      render: (value: unknown, brand: BrandWithStats) => {
+        const name = value as string;
+        return (
+          <div>
+            <div className="font-medium">{name}</div>
+            <div className="text-sm text-gray-500">/{brand.slug}</div>
+          </div>
+        );
+      },
     },
     {
       key: "productCount",
       label: "Products",
-      render: (count: number) => (
-        <Badge variant={count > 0 ? "default" : "secondary"}>
-          {count}
-        </Badge>
-      ),
+      render: (value: unknown) => {
+        const count = value as number;
+        return (
+          <Badge variant={count > 0 ? "default" : "secondary"}>
+            {count}
+          </Badge>
+        );
+      },
     },
     {
       key: "createdAt",
       label: "Created",
-      render: renderDate,
+      render: (value: unknown) => renderDate(value as Date | string | null),
     },
   ];
 
@@ -147,28 +155,6 @@ const BrandsTable: React.FC<BrandsTableProps> = ({ brands }) => {
         emptyMessage="No brands found. Create your first brand to get started."
         isDeleting={(brand) => isDeleting === brand.id}
       />
-
-      {/* Summary Stats */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {totalBrands}
-          </div>
-          <div className="text-sm text-gray-600">Total Brands</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {activeBrands}
-          </div>
-          <div className="text-sm text-gray-600">Active Brands</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-purple-600">
-            {totalProducts}
-          </div>
-          <div className="text-sm text-gray-600">Total Products</div>
-        </div>
-      </div> */}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={() => !isDeleting && cancelDelete()}>
         <AlertDialogContent>

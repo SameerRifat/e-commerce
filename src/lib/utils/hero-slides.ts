@@ -2,21 +2,21 @@
 import { SelectHeroSlide } from "@/lib/db/schema/hero-slides";
 import { db } from "@/lib/db";
 import { products, collections } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray, count, sum, sql } from "drizzle-orm";
+import { heroSlides } from "@/lib/db/schema/hero-slides";
+import { HeroSlideWithLinks } from "../actions/hero-slides";
 
 /**
- * Generate link URL from slide data (optimized - no DB queries)
+ * Generate link URL from slide data (no DB queries needed)
  */
 export function getHeroSlideLink(slide: HeroSlideWithLinks): string | null {
     switch (slide.linkType) {
         case 'product':
-            if (!slide.linkedProduct) return null;
-            const productSlug = slide.linkedProduct.sku ?? 
-                slide.linkedProduct.name.toLowerCase().replace(/\s+/g, '-');
-            return `/products/${productSlug}`;
+            if (!slide.linkedProduct?.slug) return null;
+            return `/products/${slide.linkedProduct.slug}`;
             
         case 'collection':
-            if (!slide.linkedCollection) return null;
+            if (!slide.linkedCollection?.slug) return null;
             return `/collections/${slide.linkedCollection.slug}`;
             
         case 'external':
@@ -53,9 +53,6 @@ export function validateHeroMedia(
         };
     }
 
-    // Check aspect ratio recommendations (optional)
-    // This would require reading the file dimensions
-
     return { valid: true };
 }
 
@@ -71,22 +68,13 @@ export async function resolveHeroSlideLink(
                 if (!slide.linkedProductId) return null;
 
                 const [product] = await db
-                    .select({
-                        slug: products.sku, // Assuming you want to use SKU as slug
-                        name: products.name
-                    })
+                    .select({ slug: products.slug })
                     .from(products)
                     .where(eq(products.id, slide.linkedProductId))
                     .limit(1);
 
-                if (!product) {
-                    console.warn(`Linked product ${slide.linkedProductId} not found`);
-                    return null;
-                }
-
-                // Create slug from name if no SKU
-                const slug = product.slug || product.name.toLowerCase().replace(/\s+/g, "-");
-                return `/products/${slug}`;
+                if (!product?.slug) return null;
+                return `/products/${product.slug}`;
             }
 
             case "collection": {
@@ -98,11 +86,7 @@ export async function resolveHeroSlideLink(
                     .where(eq(collections.id, slide.linkedCollectionId))
                     .limit(1);
 
-                if (!collection) {
-                    console.warn(`Linked collection ${slide.linkedCollectionId} not found`);
-                    return null;
-                }
-
+                if (!collection?.slug) return null;
                 return `/collections/${collection.slug}`;
             }
 
@@ -127,7 +111,6 @@ export async function batchResolveHeroSlideLinks(
 ): Promise<Map<string, string | null>> {
     const linkMap = new Map<string, string | null>();
 
-    // Separate slides by link type for batch queries
     const productSlides = slides.filter((s) => s.linkType === "product" && s.linkedProductId);
     const collectionSlides = slides.filter((s) => s.linkType === "collection" && s.linkedCollectionId);
 
@@ -135,15 +118,12 @@ export async function batchResolveHeroSlideLinks(
     if (productSlides.length > 0) {
         const productIds = productSlides.map((s) => s.linkedProductId!);
         const productData = await db
-            .select({ id: products.id, slug: products.sku, name: products.name })
+            .select({ id: products.id, slug: products.slug })
             .from(products)
             .where(inArray(products.id, productIds));
 
         const productMap = new Map(
-            productData.map((p) => [
-                p.id,
-                `/products/${p.slug || p.name.toLowerCase().replace(/\s+/g, "-")}`,
-            ])
+            productData.map((p) => [p.id, `/products/${p.slug}`])
         );
 
         productSlides.forEach((slide) => {
@@ -190,12 +170,10 @@ export function isSlideActive(slide: SelectHeroSlide): boolean {
 
     const now = new Date();
 
-    // Check if published date has passed
     if (slide.publishedAt && slide.publishedAt > now) {
         return false;
     }
 
-    // Check if expiration date has not been reached
     if (slide.expiresAt && slide.expiresAt < now) {
         return false;
     }
@@ -219,19 +197,16 @@ export function calculateAspectRatio(
 ): { ratio: string; matches: "desktop" | "mobile" | "custom" } {
     const aspectRatio = width / height;
 
-    // Desktop recommendation: 16:6 (2.667)
     const desktopRatio = 16 / 6;
     if (Math.abs(aspectRatio - desktopRatio) < 0.1) {
         return { ratio: "16:6", matches: "desktop" };
     }
 
-    // Mobile recommendation: 3:4 (0.75)
     const mobileRatio = 3 / 4;
     if (Math.abs(aspectRatio - mobileRatio) < 0.1) {
         return { ratio: "3:4", matches: "mobile" };
     }
 
-    // Custom ratio
     const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
     const divisor = gcd(width, height);
     return {
@@ -284,7 +259,6 @@ export function sanitizeExternalUrl(url: string): string | null {
     try {
         const parsed = new URL(url);
 
-        // Only allow http and https protocols
         if (!["http:", "https:"].includes(parsed.protocol)) {
             return null;
         }
@@ -345,8 +319,3 @@ export function validateSlideScheduling(
 
     return { valid: true };
 }
-
-// Missing import for inArray
-import { inArray, count, sum, sql } from "drizzle-orm";
-import { heroSlides } from "@/lib/db/schema/hero-slides";
-import { HeroSlideWithLinks } from "../actions/hero-slides";

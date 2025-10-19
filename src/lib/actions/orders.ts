@@ -10,15 +10,12 @@ import {
   productImages,
   colors,
   sizes,
-  addresses
+  addresses,
+  reviews,
 } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/actions";
-import { clearCart } from "./cart";
-import { eq, and, desc, asc, inArray, sql, isNull } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import type { CartItemWithDetails } from "./cart";
-import type { CheckoutData } from "@/lib/utils/order-helpers";
-import type { OrderCalculation } from "@/lib/utils/order-helpers";
 
 export type OrderStatus =
   | 'pending'
@@ -29,16 +26,18 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-// Enhanced order type with related data
+export type PaymentMethod = 'cod' | 'jazzcash' | 'easypaisa';
+
+// ✅ ENHANCED: Review status aligned with unified types
 export interface OrderWithDetails {
   id: string;
   userId: string | null;
-  status: OrderStatus; // FIXED: Using complete OrderStatus type
+  status: OrderStatus;
   totalAmount: number;
   subtotal: number;
   shippingCost: number;
   taxAmount: number;
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -73,6 +72,7 @@ export interface OrderWithDetails {
     product?: {
       id: string;
       name: string;
+      slug: string;
       sku: string;
       images: Array<{
         id: string;
@@ -86,6 +86,7 @@ export interface OrderWithDetails {
       product: {
         id: string;
         name: string;
+        slug: string;
       };
       color: {
         id: string;
@@ -102,200 +103,25 @@ export interface OrderWithDetails {
         isPrimary: boolean;
       }>;
     };
+    reviewStatus?: {
+      hasReview: boolean;
+      reviewId?: string;
+      rating?: number;
+      comment?: string | null;
+    };
   }>;
 }
 
-// Create order from checkout data with inventory deduction
-export async function createOrder(data: {
-  cartItems: CartItemWithDetails[];
-  calculation: OrderCalculation;
-  checkoutData: CheckoutData;
-  userId: string;
-}): Promise<{
-  success: boolean;
-  orderId?: string;
-  error?: string;
-}> {
-  try {
-    const { cartItems, calculation, checkoutData, userId } = data;
-
-    // Start transaction - everything succeeds or everything fails
-    const result = await db.transaction(async (tx) => {
-
-      // STEP 1: Validate and deduct inventory atomically
-      for (const item of cartItems) {
-        if (item.isSimpleProduct && item.product) {
-          // Handle simple product
-          const [currentProduct] = await tx
-            .select({
-              inStock: products.inStock,
-              name: products.name
-            })
-            .from(products)
-            .where(eq(products.id, item.product.id))
-            .for('update') // Lock row to prevent race conditions
-            .limit(1);
-
-          if (!currentProduct) {
-            throw new Error(`Product "${item.product.name}" not found.`);
-          }
-
-          const currentStock = currentProduct.inStock || 0;
-
-          // Check if sufficient stock
-          if (currentStock < item.quantity) {
-            throw new Error(
-              `Insufficient stock for "${currentProduct.name}". Available: ${currentStock}, Requested: ${item.quantity}`
-            );
-          }
-
-          // Deduct inventory
-          await tx
-            .update(products)
-            .set({
-              inStock: sql`${products.inStock} - ${item.quantity}`,
-              updatedAt: new Date(),
-            })
-            .where(eq(products.id, item.product.id));
-
-        } else if (!item.isSimpleProduct && item.variant) {
-          // Handle configurable product variant
-          const [currentVariant] = await tx
-            .select({ inStock: productVariants.inStock })
-            .from(productVariants)
-            .where(eq(productVariants.id, item.variant.id))
-            .for('update') // Lock row to prevent race conditions
-            .limit(1);
-
-          if (!currentVariant) {
-            throw new Error(`Product variant not found.`);
-          }
-
-          const currentStock = currentVariant.inStock || 0;
-          const variantName = `${item.variant.product.name} (${item.variant.color?.name || ''} ${item.variant.size?.name || ''})`.trim();
-
-          // Check if sufficient stock
-          if (currentStock < item.quantity) {
-            throw new Error(
-              `Insufficient stock for "${variantName}". Available: ${currentStock}, Requested: ${item.quantity}`
-            );
-          }
-
-          // Deduct inventory
-          await tx
-            .update(productVariants)
-            .set({
-              inStock: sql`${productVariants.inStock} - ${item.quantity}`,
-            })
-            .where(eq(productVariants.id, item.variant.id));
-        }
-      }
-
-      // STEP 2: Create order record (only after successful inventory deduction)
-      const [newOrder] = await tx
-        .insert(orders)
-        .values({
-          userId,
-          status: 'pending',
-          totalAmount: calculation.totalAmount.toString(),
-          subtotal: calculation.subtotal.toString(),
-          shippingCost: calculation.shippingCost.toString(),
-          taxAmount: calculation.taxAmount.toString(),
-          shippingAddressId: checkoutData.shippingAddressId || null,
-          billingAddressId: checkoutData.useSameAddress
-            ? checkoutData.shippingAddressId
-            : checkoutData.billingAddressId || null,
-          paymentMethod: checkoutData.paymentMethod,
-          notes: checkoutData.notes || null,
-        })
-        .returning({ id: orders.id });
-
-      // STEP 3: Create order items
-      const orderItemsData = cartItems.map(item => {
-        if (item.isSimpleProduct && item.product) {
-          return {
-            orderId: newOrder.id,
-            productId: item.product.id,
-            productVariantId: null,
-            isSimpleProduct: true,
-            quantity: item.quantity,
-            priceAtPurchase: parseFloat(item.product.price).toString(),
-            salePriceAtPurchase: item.product.salePrice ? parseFloat(item.product.salePrice).toString() : null,
-          };
-        } else if (!item.isSimpleProduct && item.variant) {
-          return {
-            orderId: newOrder.id,
-            productId: item.variant.product.id,
-            productVariantId: item.variant.id,
-            isSimpleProduct: false,
-            quantity: item.quantity,
-            priceAtPurchase: parseFloat(item.variant.price).toString(),
-            salePriceAtPurchase: item.variant.salePrice ? parseFloat(item.variant.salePrice).toString() : null,
-          };
-        }
-        return null;
-      }).filter((item): item is NonNullable<typeof item> => item !== null);
-
-      if (orderItemsData.length > 0) {
-        await tx.insert(orderItems).values(orderItemsData);
-      }
-
-      return newOrder.id;
-    });
-
-    // Clear cart after successful order creation
-    await clearCart();
-
-    return {
-      success: true,
-      orderId: result,
-    };
-  } catch (error) {
-    console.error("Error creating order:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create order. Please try again.",
-    };
-  }
+interface ProductImage {
+  id: string;
+  url: string;
+  isPrimary: boolean;
 }
 
-// Restore inventory when order is cancelled
-async function restoreInventory(orderId: string): Promise<void> {
-  try {
-    await db.transaction(async (tx) => {
-      // Get all order items for this order
-      const items = await tx
-        .select()
-        .from(orderItems)
-        .where(eq(orderItems.orderId, orderId));
-
-      // Restore stock for each item
-      for (const item of items) {
-        if (item.isSimpleProduct && item.productId) {
-          await tx
-            .update(products)
-            .set({
-              inStock: sql`${products.inStock} + ${item.quantity}`,
-              updatedAt: new Date(),
-            })
-            .where(eq(products.id, item.productId));
-        } else if (!item.isSimpleProduct && item.productVariantId) {
-          await tx
-            .update(productVariants)
-            .set({
-              inStock: sql`${productVariants.inStock} + ${item.quantity}`,
-            })
-            .where(eq(productVariants.id, item.productVariantId));
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Error restoring inventory:", error);
-    // Log but don't throw - inventory restoration failure shouldn't block cancellation
-  }
-}
-
-// Get order by ID with full details - using manual joins instead of Drizzle relations
+/**
+ * ✅ OPTIMIZED: Get order by ID with full details including review statuses
+ * NO N+1 queries - all data fetched in efficient batches with JOINs
+ */
 export async function getOrder(orderId: string): Promise<{
   success: boolean;
   order?: OrderWithDetails;
@@ -310,8 +136,8 @@ export async function getOrder(orderId: string): Promise<{
       };
     }
 
-    // Get basic order data
-    const orderData = await db
+    // Query 1: Get basic order data
+    const [orderData] = await db
       .select({
         id: orders.id,
         userId: orders.userId,
@@ -334,44 +160,22 @@ export async function getOrder(orderId: string): Promise<{
       ))
       .limit(1);
 
-    if (!orderData.length) {
+    if (!orderData) {
       return {
         success: false,
         error: "Order not found.",
       };
     }
 
-    const order = orderData[0];
+    // Collect address IDs to fetch
+    const addressIds = [
+      orderData.shippingAddressId,
+      ...(orderData.billingAddressId && orderData.billingAddressId !== orderData.shippingAddressId 
+        ? [orderData.billingAddressId] 
+        : [])
+    ].filter(Boolean) as string[];
 
-    // Get shipping address
-    let shippingAddress = null;
-    if (order.shippingAddressId) {
-      const shippingAddressData = await db
-        .select()
-        .from(addresses)
-        .where(eq(addresses.id, order.shippingAddressId))
-        .limit(1);
-
-      if (shippingAddressData.length) {
-        shippingAddress = shippingAddressData[0];
-      }
-    }
-
-    // Get billing address
-    let billingAddress = null;
-    if (order.billingAddressId && order.billingAddressId !== order.shippingAddressId) {
-      const billingAddressData = await db
-        .select()
-        .from(addresses)
-        .where(eq(addresses.id, order.billingAddressId))
-        .limit(1);
-
-      if (billingAddressData.length) {
-        billingAddress = billingAddressData[0];
-      }
-    }
-
-    // Get order items
+    // Query 2: Get all order items at once
     const orderItemsData = await db
       .select({
         id: orderItems.id,
@@ -385,42 +189,185 @@ export async function getOrder(orderId: string): Promise<{
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
 
-    // Process order items to get related data
-    const processedItems = [];
+    if (orderItemsData.length === 0) {
+      // Order exists but has no items - still valid
+      const addressMap = new Map();
+      if (addressIds.length > 0) {
+        const addressesData = await db
+          .select()
+          .from(addresses)
+          .where(inArray(addresses.id, addressIds));
+        addressesData.forEach(addr => addressMap.set(addr.id, addr));
+      }
 
-    for (const item of orderItemsData) {
-      if (item.isSimpleProduct && item.productId) {
-        // Handle simple product
-        const productData = await db
-          .select({
-            id: products.id,
-            name: products.name,
-            sku: products.sku,
-          })
-          .from(products)
-          .where(eq(products.id, item.productId))
-          .limit(1);
+      return {
+        success: true,
+        order: {
+          id: orderData.id,
+          userId: orderData.userId,
+          status: orderData.status,
+          totalAmount: parseFloat(orderData.totalAmount),
+          subtotal: parseFloat(orderData.subtotal),
+          shippingCost: parseFloat(orderData.shippingCost),
+          taxAmount: parseFloat(orderData.taxAmount),
+          paymentMethod: orderData.paymentMethod as PaymentMethod,
+          notes: orderData.notes,
+          createdAt: orderData.createdAt,
+          updatedAt: orderData.updatedAt,
+          shippingAddress: orderData.shippingAddressId ? addressMap.get(orderData.shippingAddressId) || null : null,
+          billingAddress: orderData.billingAddressId ? addressMap.get(orderData.billingAddressId) || null : null,
+          items: [],
+        },
+      };
+    }
 
-        if (productData.length) {
-          const product = productData[0];
+    // Collect all unique product and variant IDs
+    const productIds = new Set<string>();
+    const variantIds = new Set<string>();
 
-          // FIXED: Get product images - removed the variantId null filter that was causing empty results
-          const imagesData = await db
-            .select({
-              id: productImages.id,
-              url: productImages.url,
-              isPrimary: productImages.isPrimary,
-            })
-            .from(productImages)
-            .where(
-              and(
-                eq(productImages.productId, product.id),
-                isNull(productImages.variantId) // Use isNull() instead of eq(null)
-              )
-            )
-            .orderBy(desc(productImages.isPrimary));
+    orderItemsData.forEach(item => {
+      if (item.productId) productIds.add(item.productId);
+      if (item.productVariantId) variantIds.add(item.productVariantId);
+    });
 
-          processedItems.push({
+    // Query 3: Batch fetch all addresses
+    const addressMap = new Map();
+    if (addressIds.length > 0) {
+      const addressesData = await db
+        .select()
+        .from(addresses)
+        .where(inArray(addresses.id, addressIds));
+      addressesData.forEach(addr => addressMap.set(addr.id, addr));
+    }
+
+    // Query 4: Batch fetch all products
+    const productsMap = new Map();
+    if (productIds.size > 0) {
+      const productsData = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          slug: products.slug,
+          sku: products.sku,
+        })
+        .from(products)
+        .where(inArray(products.id, Array.from(productIds)));
+      productsData.forEach(p => productsMap.set(p.id, p));
+    }
+
+    // Query 5: Batch fetch all variants with joins
+    const variantsMap = new Map();
+    const variantProductIds = new Set<string>();
+
+    if (variantIds.size > 0) {
+      const variantsData = await db
+        .select({
+          variantId: productVariants.id,
+          variantSku: productVariants.sku,
+          productId: productVariants.productId,
+          productName: products.name,
+          productSlug: products.slug,
+          colorId: colors.id,
+          colorName: colors.name,
+          colorHexCode: colors.hexCode,
+          sizeId: sizes.id,
+          sizeName: sizes.name,
+        })
+        .from(productVariants)
+        .innerJoin(products, eq(products.id, productVariants.productId))
+        .leftJoin(colors, eq(colors.id, productVariants.colorId))
+        .leftJoin(sizes, eq(sizes.id, productVariants.sizeId))
+        .where(inArray(productVariants.id, Array.from(variantIds)));
+
+      variantsData.forEach(v => {
+        variantsMap.set(v.variantId, v);
+        variantProductIds.add(v.productId);
+      });
+    }
+
+    // Combine all product IDs for image fetching
+    const allProductIdsForImages = new Set([...productIds, ...variantProductIds]);
+
+    // Query 6: Batch fetch all images
+    const imagesMap = new Map<string, ProductImage[]>();
+
+    if (allProductIdsForImages.size > 0) {
+      const imagesData = await db
+        .select({
+          id: productImages.id,
+          url: productImages.url,
+          isPrimary: productImages.isPrimary,
+          productId: productImages.productId,
+          variantId: productImages.variantId,
+        })
+        .from(productImages)
+        .where(inArray(productImages.productId, Array.from(allProductIdsForImages)))
+        .orderBy(desc(productImages.isPrimary));
+
+      imagesData.forEach(img => {
+        if (img.variantId) {
+          if (!imagesMap.has(img.variantId)) {
+            imagesMap.set(img.variantId, []);
+          }
+          imagesMap.get(img.variantId)!.push({
+            id: img.id,
+            url: img.url,
+            isPrimary: img.isPrimary || false,
+          });
+        }
+
+        if (!img.variantId) {
+          if (!imagesMap.has(img.productId)) {
+            imagesMap.set(img.productId, []);
+          }
+          imagesMap.get(img.productId)!.push({
+            id: img.id,
+            url: img.url,
+            isPrimary: img.isPrimary || false,
+          });
+        }
+      });
+    }
+
+    // Query 7: Batch fetch ALL reviews for these products (single query!)
+    const reviewsMap = new Map<string, { id: string; rating: number; comment: string | null }>();
+    
+    if (productIds.size > 0) {
+      const reviewsData = await db
+        .select({
+          id: reviews.id,
+          productId: reviews.productId,
+          rating: reviews.rating,
+          comment: reviews.comment,
+        })
+        .from(reviews)
+        .where(
+          and(
+            inArray(reviews.productId, Array.from(productIds)),
+            eq(reviews.userId, user.id)
+          )
+        );
+
+      reviewsData.forEach(review => {
+        reviewsMap.set(review.productId, {
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment,
+        });
+      });
+    }
+
+    // Build processed items using cached data
+    const processedItems = orderItemsData
+      .map(item => {
+        if (item.isSimpleProduct && item.productId) {
+          const product = productsMap.get(item.productId);
+          if (!product) return null;
+
+          const images = imagesMap.get(item.productId) || [];
+          const review = reviewsMap.get(item.productId);
+
+          return {
             id: item.id,
             quantity: item.quantity,
             priceAtPurchase: parseFloat(item.priceAtPurchase),
@@ -429,57 +376,29 @@ export async function getOrder(orderId: string): Promise<{
             product: {
               id: product.id,
               name: product.name,
+              slug: product.slug,
               sku: product.sku || '',
-              images: imagesData.map(img => ({
-                id: img.id,
-                url: img.url,
-                isPrimary: img.isPrimary || false,
-              })),
+              images,
             },
-          });
-        }
-      } else if (!item.isSimpleProduct && item.productVariantId) {
-        // Handle configurable product variant
-        const variantData = await db
-          .select({
-            variantId: productVariants.id,
-            variantSku: productVariants.sku,
-            productId: products.id,
-            productName: products.name,
-            colorId: colors.id,
-            colorName: colors.name,
-            colorHexCode: colors.hexCode,
-            sizeId: sizes.id,
-            sizeName: sizes.name,
-          })
-          .from(productVariants)
-          .innerJoin(products, eq(products.id, productVariants.productId))
-          .leftJoin(colors, eq(colors.id, productVariants.colorId))
-          .leftJoin(sizes, eq(sizes.id, productVariants.sizeId))
-          .where(eq(productVariants.id, item.productVariantId))
-          .limit(1);
+            reviewStatus: review ? {
+              hasReview: true,
+              reviewId: review.id,
+              rating: review.rating,
+              comment: review.comment,
+            } : {
+              hasReview: false,
+            },
+          };
+        } else if (!item.isSimpleProduct && item.productVariantId) {
+          const variant = variantsMap.get(item.productVariantId);
+          if (!variant) return null;
 
-        if (variantData.length) {
-          const variant = variantData[0];
+          const variantImages = imagesMap.get(item.productVariantId) || [];
+          const productImages = imagesMap.get(variant.productId) || [];
+          const images = variantImages.length > 0 ? variantImages : productImages;
+          const review = reviewsMap.get(variant.productId);
 
-          // Get variant images
-          const imagesData = await db
-            .select({
-              id: productImages.id,
-              url: productImages.url,
-              isPrimary: productImages.isPrimary,
-              variantId: productImages.variantId,
-            })
-            .from(productImages)
-            .where(eq(productImages.productId, variant.productId))
-            .orderBy(desc(productImages.isPrimary));
-
-          // Filter images for this variant
-          const filteredImages = imagesData.filter(img =>
-            img.variantId === variant.variantId || img.variantId === null
-          );
-
-          processedItems.push({
+          return {
             id: item.id,
             quantity: item.quantity,
             priceAtPurchase: parseFloat(item.priceAtPurchase),
@@ -491,6 +410,7 @@ export async function getOrder(orderId: string): Promise<{
               product: {
                 id: variant.productId,
                 name: variant.productName,
+                slug: variant.productSlug,
               },
               color: variant.colorId ? {
                 id: variant.colorId,
@@ -501,31 +421,36 @@ export async function getOrder(orderId: string): Promise<{
                 id: variant.sizeId,
                 name: variant.sizeName!,
               } : null,
-              images: filteredImages.map(img => ({
-                id: img.id,
-                url: img.url,
-                isPrimary: img.isPrimary || false,
-              })),
+              images,
             },
-          });
+            reviewStatus: review ? {
+              hasReview: true,
+              reviewId: review.id,
+              rating: review.rating,
+              comment: review.comment,
+            } : {
+              hasReview: false,
+            },
+          };
         }
-      }
-    }
+        return null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
     const result: OrderWithDetails = {
-      id: order.id,
-      userId: order.userId,
-      status: order.status,
-      totalAmount: parseFloat(order.totalAmount),
-      subtotal: parseFloat(order.subtotal),
-      shippingCost: parseFloat(order.shippingCost),
-      taxAmount: parseFloat(order.taxAmount),
-      paymentMethod: order.paymentMethod,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-      shippingAddress,
-      billingAddress,
+      id: orderData.id,
+      userId: orderData.userId,
+      status: orderData.status,
+      totalAmount: parseFloat(orderData.totalAmount),
+      subtotal: parseFloat(orderData.subtotal),
+      shippingCost: parseFloat(orderData.shippingCost),
+      taxAmount: parseFloat(orderData.taxAmount),
+      paymentMethod: orderData.paymentMethod as PaymentMethod,
+      notes: orderData.notes,
+      createdAt: orderData.createdAt,
+      updatedAt: orderData.updatedAt,
+      shippingAddress: orderData.shippingAddressId ? addressMap.get(orderData.shippingAddressId) || null : null,
+      billingAddress: orderData.billingAddressId ? addressMap.get(orderData.billingAddressId) || null : null,
       items: processedItems,
     };
 
@@ -542,7 +467,10 @@ export async function getOrder(orderId: string): Promise<{
   }
 }
 
-// Get user's orders
+/**
+ * ✅ OPTIMIZED: Get user's orders with efficient batch queries INCLUDING review statuses
+ * NO N+1 queries - all related data including reviews fetched in parallel batches
+ */
 export async function getUserOrders(): Promise<{
   success: boolean;
   orders?: OrderWithDetails[];
@@ -557,7 +485,7 @@ export async function getUserOrders(): Promise<{
       };
     }
 
-    // Get basic order data
+    // Query 1: Get basic order data
     const userOrdersData = await db
       .select({
         id: orders.id,
@@ -587,7 +515,7 @@ export async function getUserOrders(): Promise<{
 
     const orderIds = userOrdersData.map(order => order.id);
 
-    // Batch fetch all addresses for this user (single query)
+    // Query 2: Batch fetch all addresses
     const userAddresses = await db
       .select()
       .from(addresses)
@@ -595,7 +523,7 @@ export async function getUserOrders(): Promise<{
 
     const addressMap = new Map(userAddresses.map(addr => [addr.id, addr]));
 
-    // Batch fetch ALL order items for ALL orders (single query)
+    // Query 3: Batch fetch ALL order items
     const allOrderItems = await db
       .select({
         id: orderItems.id,
@@ -610,31 +538,28 @@ export async function getUserOrders(): Promise<{
       .from(orderItems)
       .where(inArray(orderItems.orderId, orderIds));
 
-    // Group order items by order ID
     const orderItemsMap = new Map<string, typeof allOrderItems>();
+    const productIds = new Set<string>();
+    const variantIds = new Set<string>();
+
     allOrderItems.forEach(item => {
       if (!orderItemsMap.has(item.orderId)) {
         orderItemsMap.set(item.orderId, []);
       }
       orderItemsMap.get(item.orderId)!.push(item);
-    });
 
-    // Collect all unique product and variant IDs
-    const productIds = new Set<string>();
-    const variantIds = new Set<string>();
-
-    allOrderItems.forEach(item => {
       if (item.productId) productIds.add(item.productId);
       if (item.productVariantId) variantIds.add(item.productVariantId);
     });
 
-    // Batch fetch all products (single query)
+    // Query 4: Batch fetch all products
     const productsMap = new Map();
     if (productIds.size > 0) {
       const productsData = await db
         .select({
           id: products.id,
           name: products.name,
+          slug: products.slug,
           sku: products.sku,
         })
         .from(products)
@@ -643,7 +568,7 @@ export async function getUserOrders(): Promise<{
       productsData.forEach(p => productsMap.set(p.id, p));
     }
 
-    // Batch fetch all variants with related data (single query)
+    // Query 5: Batch fetch all variants with joins
     const variantsMap = new Map();
     const variantProductIds = new Set<string>();
 
@@ -654,6 +579,7 @@ export async function getUserOrders(): Promise<{
           variantSku: productVariants.sku,
           productId: productVariants.productId,
           productName: products.name,
+          productSlug: products.slug,
           colorId: colors.id,
           colorName: colors.name,
           colorHexCode: colors.hexCode,
@@ -672,11 +598,11 @@ export async function getUserOrders(): Promise<{
       });
     }
 
-    // Combine all product IDs for image fetching
+    // Combine all product IDs
     const allProductIdsForImages = new Set([...productIds, ...variantProductIds]);
 
-    // Batch fetch all images for all products (single query)
-    const imagesMap = new Map<string, Array<any>>();
+    // Query 6: Batch fetch all images
+    const imagesMap = new Map<string, ProductImage[]>();
 
     if (allProductIdsForImages.size > 0) {
       const imagesData = await db
@@ -691,9 +617,7 @@ export async function getUserOrders(): Promise<{
         .where(inArray(productImages.productId, Array.from(allProductIdsForImages)))
         .orderBy(desc(productImages.isPrimary));
 
-      // Group images by product ID and variant ID
       imagesData.forEach(img => {
-        // For variant images
         if (img.variantId) {
           if (!imagesMap.has(img.variantId)) {
             imagesMap.set(img.variantId, []);
@@ -705,7 +629,6 @@ export async function getUserOrders(): Promise<{
           });
         }
 
-        // For product images (variants without specific images or simple products)
         if (!img.variantId) {
           if (!imagesMap.has(img.productId)) {
             imagesMap.set(img.productId, []);
@@ -719,9 +642,36 @@ export async function getUserOrders(): Promise<{
       });
     }
 
-    // Now process all orders using the cached data
+    // Query 7: Batch fetch ALL reviews for ALL products (single query!)
+    const reviewsMap = new Map<string, { id: string; rating: number; comment: string | null }>();
+    
+    if (allProductIdsForImages.size > 0) {
+      const reviewsData = await db
+        .select({
+          id: reviews.id,
+          productId: reviews.productId,
+          rating: reviews.rating,
+          comment: reviews.comment,
+        })
+        .from(reviews)
+        .where(
+          and(
+            inArray(reviews.productId, Array.from(allProductIdsForImages)),
+            eq(reviews.userId, user.id)
+          )
+        );
+
+      reviewsData.forEach(review => {
+        reviewsMap.set(review.productId, {
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment,
+        });
+      });
+    }
+
+    // Build all orders from cached data
     const processedOrders: OrderWithDetails[] = userOrdersData.map(orderData => {
-      // Get addresses from cache
       const shippingAddress = orderData.shippingAddressId
         ? addressMap.get(orderData.shippingAddressId) || null
         : null;
@@ -731,67 +681,86 @@ export async function getUserOrders(): Promise<{
         ? addressMap.get(orderData.billingAddressId) || null
         : null;
 
-      // Get order items from cache
       const itemsForThisOrder = orderItemsMap.get(orderData.id) || [];
 
-      // Process order items using cached data
-      const processedItems = itemsForThisOrder.map(item => {
-        if (item.isSimpleProduct && item.productId) {
-          const product = productsMap.get(item.productId);
-          if (!product) return null;
+      const processedItems = itemsForThisOrder
+        .map(item => {
+          if (item.isSimpleProduct && item.productId) {
+            const product = productsMap.get(item.productId);
+            if (!product) return null;
 
-          const images = imagesMap.get(item.productId) || [];
+            const images = (imagesMap.get(item.productId) || []).slice(0, 3);
+            const review = reviewsMap.get(item.productId);
 
-          return {
-            id: item.id,
-            quantity: item.quantity,
-            priceAtPurchase: parseFloat(item.priceAtPurchase),
-            salePriceAtPurchase: item.salePriceAtPurchase ? parseFloat(item.salePriceAtPurchase) : null,
-            isSimpleProduct: true,
-            product: {
-              id: product.id,
-              name: product.name,
-              sku: product.sku || '',
-              images: images.slice(0, 3), // Limit to 3 images for list view
-            },
-          };
-        } else if (!item.isSimpleProduct && item.productVariantId) {
-          const variant = variantsMap.get(item.productVariantId);
-          if (!variant) return null;
-
-          // Get variant-specific images or fall back to product images
-          const variantImages = imagesMap.get(item.productVariantId) || [];
-          const productImages = imagesMap.get(variant.productId) || [];
-          const images = variantImages.length > 0 ? variantImages : productImages;
-
-          return {
-            id: item.id,
-            quantity: item.quantity,
-            priceAtPurchase: parseFloat(item.priceAtPurchase),
-            salePriceAtPurchase: item.salePriceAtPurchase ? parseFloat(item.salePriceAtPurchase) : null,
-            isSimpleProduct: false,
-            variant: {
-              id: variant.variantId,
-              sku: variant.variantSku,
+            return {
+              id: item.id,
+              quantity: item.quantity,
+              priceAtPurchase: parseFloat(item.priceAtPurchase),
+              salePriceAtPurchase: item.salePriceAtPurchase ? parseFloat(item.salePriceAtPurchase) : null,
+              isSimpleProduct: true,
               product: {
-                id: variant.productId,
-                name: variant.productName,
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                sku: product.sku || '',
+                images,
               },
-              color: variant.colorId ? {
-                id: variant.colorId,
-                name: variant.colorName!,
-                hexCode: variant.colorHexCode!,
-              } : null,
-              size: variant.sizeId ? {
-                id: variant.sizeId,
-                name: variant.sizeName!,
-              } : null,
-              images: images.slice(0, 3), // Limit to 3 images for list view
-            },
-          };
-        }
-        return null;
-      }).filter((item): item is NonNullable<typeof item> => item !== null);
+              reviewStatus: review ? {
+                hasReview: true,
+                reviewId: review.id,
+                rating: review.rating,
+                comment: review.comment,
+              } : {
+                hasReview: false,
+              },
+            };
+          } else if (!item.isSimpleProduct && item.productVariantId) {
+            const variant = variantsMap.get(item.productVariantId);
+            if (!variant) return null;
+
+            const variantImages = imagesMap.get(item.productVariantId) || [];
+            const productImages = imagesMap.get(variant.productId) || [];
+            const images = (variantImages.length > 0 ? variantImages : productImages).slice(0, 3);
+            const review = reviewsMap.get(variant.productId);
+
+            return {
+              id: item.id,
+              quantity: item.quantity,
+              priceAtPurchase: parseFloat(item.priceAtPurchase),
+              salePriceAtPurchase: item.salePriceAtPurchase ? parseFloat(item.salePriceAtPurchase) : null,
+              isSimpleProduct: false,
+              variant: {
+                id: variant.variantId,
+                sku: variant.variantSku,
+                product: {
+                  id: variant.productId,
+                  name: variant.productName,
+                  slug: variant.productSlug,
+                },
+                color: variant.colorId ? {
+                  id: variant.colorId,
+                  name: variant.colorName!,
+                  hexCode: variant.colorHexCode!,
+                } : null,
+                size: variant.sizeId ? {
+                  id: variant.sizeId,
+                  name: variant.sizeName!,
+                } : null,
+                images,
+              },
+              reviewStatus: review ? {
+                hasReview: true,
+                reviewId: review.id,
+                rating: review.rating,
+                comment: review.comment,
+              } : {
+                hasReview: false,
+              },
+            };
+          }
+          return null;
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
 
       return {
         id: orderData.id,
@@ -801,7 +770,7 @@ export async function getUserOrders(): Promise<{
         subtotal: parseFloat(orderData.subtotal),
         shippingCost: parseFloat(orderData.shippingCost),
         taxAmount: parseFloat(orderData.taxAmount),
-        paymentMethod: orderData.paymentMethod,
+        paymentMethod: orderData.paymentMethod as PaymentMethod,
         notes: orderData.notes,
         createdAt: orderData.createdAt,
         updatedAt: orderData.updatedAt,
@@ -953,5 +922,41 @@ export async function cancelOrder(orderId: string): Promise<{
       success: false,
       error: "Failed to cancel order.",
     };
+  }
+}
+
+// Restore inventory when order is cancelled (private helper function)
+async function restoreInventory(orderId: string): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      // Get all order items for this order
+      const items = await tx
+        .select()
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
+
+      // Restore stock for each item
+      for (const item of items) {
+        if (item.isSimpleProduct && item.productId) {
+          await tx
+            .update(products)
+            .set({
+              inStock: sql`${products.inStock} + ${item.quantity}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(products.id, item.productId));
+        } else if (!item.isSimpleProduct && item.productVariantId) {
+          await tx
+            .update(productVariants)
+            .set({
+              inStock: sql`${productVariants.inStock} + ${item.quantity}`,
+            })
+            .where(eq(productVariants.id, item.productVariantId));
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error restoring inventory:", error);
+    // Log but don't throw - inventory restoration failure shouldn't block cancellation
   }
 }

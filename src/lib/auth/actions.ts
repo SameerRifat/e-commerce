@@ -131,9 +131,9 @@ export async function signIn(formData: FormData) {
 
     await migrateGuestToUser();
     return { ok: true, userId: res.user?.id };
-  } catch (error: any) {
+  } catch (error) {
     // Handle email verification error
-    if (error.message?.includes("email") && error.message?.includes("verify")) {
+    if (error instanceof Error && error.message?.includes("email") && error.message?.includes("verify")) {
       throw new Error("Please verify your email before signing in. Check your inbox for the verification link.");
     }
     throw error;
@@ -141,6 +141,8 @@ export async function signIn(formData: FormData) {
 }
 
 export async function getCurrentUser() {
+   // ⏳ Simulate network delay (e.g., 5 seconds)
+  //  await new Promise((resolve) => setTimeout(resolve, 5000));
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -223,11 +225,11 @@ export async function resetPassword(newPassword: string, token: string) {
       ok: true, 
       message: "Password reset successfully!" 
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error resetting password:", error);
     
     // Check for specific error messages
-    if (error.message?.includes("token") || error.message?.includes("expired")) {
+    if (error instanceof Error && (error.message?.includes("token") || error.message?.includes("expired"))) {
       return { 
         ok: false, 
         message: "This reset link has expired or is invalid. Please request a new one." 

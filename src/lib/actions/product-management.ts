@@ -1,4 +1,4 @@
-// src/lib/actions/product-management.ts
+// src/lib/actions/product-management.ts (UPDATED SECTION)
 "use server";
 
 import { db } from "@/lib/db";
@@ -11,6 +11,7 @@ import {
   genders,
   colors,
   sizes,
+  sizeCategories,
   type InsertProduct,
   type InsertVariant,
   type InsertProductImage,
@@ -19,10 +20,12 @@ import {
   type SelectGender,
   type SelectColor,
   type SelectSize,
+  type SelectSizeCategory,
+  SelectSizeWithCategory, 
 } from "@/lib/db/schema";
-import { 
-  completeProductFormSchema, 
-  type CompleteProductFormData 
+import {
+  completeProductFormSchema,
+  type CompleteProductFormData
 } from "@/lib/validations/product-form";
 import { eq, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -48,7 +51,7 @@ export async function getBrands(): Promise<SelectBrand[]> {
       })
       .from(brands)
       .orderBy(asc(brands.name));
-    
+
     return result;
   } catch (error) {
     console.error("Error fetching brands:", error);
@@ -64,10 +67,11 @@ export async function getCategories(): Promise<SelectCategory[]> {
         name: categories.name,
         slug: categories.slug,
         parentId: categories.parentId,
+        imageUrl: categories.imageUrl,
       })
       .from(categories)
       .orderBy(asc(categories.name));
-    
+
     return result;
   } catch (error) {
     console.error("Error fetching categories:", error);
@@ -85,7 +89,7 @@ export async function getGenders(): Promise<SelectGender[]> {
       })
       .from(genders)
       .orderBy(asc(genders.label));
-    
+
     return result;
   } catch (error) {
     console.error("Error fetching genders:", error);
@@ -104,7 +108,7 @@ export async function getColors(): Promise<SelectColor[]> {
       })
       .from(colors)
       .orderBy(asc(colors.name));
-    
+
     return result;
   } catch (error) {
     console.error("Error fetching colors:", error);
@@ -112,34 +116,38 @@ export async function getColors(): Promise<SelectColor[]> {
   }
 }
 
-export async function getSizes(): Promise<SelectSize[]> {
+// UPDATED: Single query with relations using Drizzle's query API
+export async function getSizesWithCategories(): Promise<SelectSizeWithCategory[]> {
   try {
-    const result = await db
-      .select({
-        id: sizes.id,
-        name: sizes.name,
-        slug: sizes.slug,
-        sortOrder: sizes.sortOrder,
-      })
-      .from(sizes)
-      .orderBy(asc(sizes.sortOrder));
-    
+    const result = await db.query.sizes.findMany({
+      orderBy: [asc(sizes.sortOrder)],
+      with: {
+        category: true, // Leverages the existing relation!
+      },
+    });
+
     return result;
   } catch (error) {
-    console.error("Error fetching sizes:", error);
+    console.error("Error fetching sizes with categories:", error);
     return [];
   }
 }
 
-// Get all reference data in one function for efficiency
+// UPDATED: Get all reference data including size categories
 export async function getProductFormReferenceData() {
   try {
-    const [brandsData, categoriesData, gendersData, colorsData, sizesData] = await Promise.all([
+    const [
+      brandsData,
+      categoriesData,
+      gendersData,
+      colorsData,
+      sizesData, // Now includes category data inline!
+    ] = await Promise.all([
       getBrands(),
       getCategories(),
       getGenders(),
       getColors(),
-      getSizes(),
+      getSizesWithCategories(), // Single call instead of two!
     ]);
 
     return {
@@ -147,7 +155,7 @@ export async function getProductFormReferenceData() {
       categories: categoriesData,
       genders: gendersData,
       colors: colorsData,
-      sizes: sizesData,
+      sizes: sizesData, // Each size now has .category property
     };
   } catch (error) {
     console.error("Error fetching reference data:", error);
@@ -158,6 +166,26 @@ export async function getProductFormReferenceData() {
       colors: [],
       sizes: [],
     };
+  }
+}
+
+
+// NEW: Validate slug uniqueness
+export async function validateSlugUniqueness(slug: string, excludeProductId?: string): Promise<boolean> {
+  try {
+    const existing = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.slug, slug))
+      .limit(1);
+
+    if (existing.length === 0) return true;
+    if (excludeProductId && existing[0].id === excludeProductId) return true;
+
+    return false;
+  } catch (error) {
+    console.error("Error validating slug uniqueness:", error);
+    return false;
   }
 }
 
@@ -219,6 +247,14 @@ async function validateProductData(data: CompleteProductFormData, excludeProduct
   // Business logic validation
   const errors: Record<string, string[]> = {};
 
+  // NEW: Validate slug uniqueness
+  if (data.slug) {
+    const isSlugUnique = await validateSlugUniqueness(data.slug, excludeProductId);
+    if (!isSlugUnique) {
+      errors.slug = ['This slug is already in use. Please choose a different one.'];
+    }
+  }
+
   // Validate SKU uniqueness for simple products
   if (data.productType === 'simple' && data.sku) {
     const isSkuUnique = await validateSkuUniqueness(data.sku, excludeProductId);
@@ -230,7 +266,7 @@ async function validateProductData(data: CompleteProductFormData, excludeProduct
   // Validate variant SKUs uniqueness for configurable products
   if (data.productType === 'configurable' && data.variants) {
     const skuSet = new Set<string>();
-    
+
     for (let i = 0; i < data.variants.length; i++) {
       const variant = data.variants[i];
       if (variant.sku) {
@@ -239,7 +275,7 @@ async function validateProductData(data: CompleteProductFormData, excludeProduct
           errors[`variants.${i}.sku`] = ['Duplicate SKU within variants'];
         } else {
           skuSet.add(variant.sku);
-          
+
           // Check for uniqueness across database
           const isSkuUnique = await validateSkuUniqueness(variant.sku, excludeProductId);
           if (!isSkuUnique) {
@@ -296,13 +332,13 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
     // Validate image URLs before proceeding (ATOMIC TRANSACTION VALIDATION)
     console.log("🔍 Server-side validation: Checking image URLs...");
     if (data.images && data.images.length > 0) {
-      const invalidImages = data.images.filter(img => 
-        !img.url || 
+      const invalidImages = data.images.filter(img =>
+        !img.url ||
         (!img.url.startsWith('http') && !img.url.startsWith('https')) ||
         img.url.includes('blob:') ||
         img.url.includes('example.com')
       );
-      
+
       if (invalidImages.length > 0) {
         console.error(`❌ Server validation failed: ${invalidImages.length} invalid image URLs detected`);
         console.error("Invalid images:", invalidImages.map(img => ({ id: img.id, url: img.url })));
@@ -323,6 +359,7 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
       // Create the main product
       const productData: InsertProduct = {
         name: data.name,
+        slug: data.slug,
         description: data.description,
         categoryId: data.categoryId || null,
         genderId: data.genderId || null,
@@ -347,7 +384,7 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
 
       // Create variants for configurable products and track ID mapping
       const variantIdMapping = new Map<string, string>(); // temp ID -> real ID
-      
+
       if (data.productType === 'configurable' && data.variants && data.variants.length > 0) {
         const variantInserts: InsertVariant[] = data.variants.map(variant => ({
           productId,
@@ -361,29 +398,29 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
           dimensions: variant.dimensions || null,
         }));
 
-        const createdVariants = await tx.insert(productVariants).values(variantInserts).returning({ 
+        const createdVariants = await tx.insert(productVariants).values(variantInserts).returning({
           id: productVariants.id,
-          sku: productVariants.sku 
+          sku: productVariants.sku
         });
-        
+
         // Map temporary variant IDs to real database IDs using SKU as the key
         data.variants.forEach((variant, index) => {
           if (variant.id && createdVariants[index]) {
             variantIdMapping.set(variant.id, createdVariants[index].id);
           }
         });
-        
+
         console.log(`✅ Created ${createdVariants.length} variants with ID mapping:`, Object.fromEntries(variantIdMapping));
       }
 
       // Create product images
       if (data.images && data.images.length > 0) {
         // Final validation of image URLs within transaction
-        const invalidImages = data.images.filter(img => 
-          !img.url || 
+        const invalidImages = data.images.filter(img =>
+          !img.url ||
           (!img.url.startsWith('http') && !img.url.startsWith('https'))
         );
-        
+
         if (invalidImages.length > 0) {
           throw new Error(`Transaction aborted: ${invalidImages.length} image(s) have invalid URLs`);
         }
@@ -403,7 +440,7 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
             }
             // If it's a temp ID that doesn't exist in mapping, set to null
           }
-          
+
           return {
             productId,
             variantId: realVariantId,
@@ -430,6 +467,7 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
     // Revalidate relevant paths
     revalidatePath('/dashboard/products');
     revalidatePath('/products');
+    // revalidatePath(`/products/${result.slug}`);
 
     return {
       success: true,
@@ -444,9 +482,10 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
   }
 }
 
-// Update product function
+// src/lib/actions/product-management.ts
+// Update product function (FIXED: Preserves variants referenced by carts)
 export async function updateProduct(
-  productId: string, 
+  productId: string,
   data: CompleteProductFormData
 ): Promise<ActionResult<{ productId: string }>> {
   try {
@@ -461,6 +500,7 @@ export async function updateProduct(
       // Update the main product
       const productData: Partial<InsertProduct> = {
         name: data.name,
+        slug: data.slug,
         description: data.description,
         categoryId: data.categoryId || null,
         genderId: data.genderId || null,
@@ -484,40 +524,128 @@ export async function updateProduct(
 
       // Handle variants for configurable products and track ID mapping
       const variantIdMapping = new Map<string, string>(); // temp ID -> real ID
-      
+
       if (data.productType === 'configurable') {
-        // Delete existing variants
-        await tx.delete(productVariants).where(eq(productVariants.productId, productId));
+        // FIXED: Fetch existing variants first
+        const existingVariants = await tx
+          .select()
+          .from(productVariants)
+          .where(eq(productVariants.productId, productId));
 
-        // Create new variants
+        // Create a map of existing variant IDs by SKU
+        const existingVariantMap = new Map(
+          existingVariants.map(v => [v.sku, v])
+        );
+
+        // Track which existing variants are still needed
+        const updatedVariantIds = new Set<string>();
+
         if (data.variants && data.variants.length > 0) {
-          const variantInserts: InsertVariant[] = data.variants.map(variant => ({
-            productId,
-            sku: variant.sku!,
-            price: variant.price,
-            salePrice: variant.salePrice || null,
-            colorId: variant.colorId || null,
-            sizeId: variant.sizeId || null,
-            inStock: variant.inStock || 0,
-            weight: variant.weight || null,
-            dimensions: variant.dimensions || null,
-          }));
+          for (const variant of data.variants) {
+            const existingVariant = existingVariantMap.get(variant.sku!);
 
-          const createdVariants = await tx.insert(productVariants).values(variantInserts).returning({ 
-            id: productVariants.id,
-            sku: productVariants.sku 
-          });
-          
-          // Map temporary variant IDs to real database IDs
-          data.variants.forEach((variant, index) => {
-            if (variant.id && createdVariants[index]) {
-              variantIdMapping.set(variant.id, createdVariants[index].id);
+            if (existingVariant) {
+              // UPDATE: Variant with this SKU exists, update it
+              await tx
+                .update(productVariants)
+                .set({
+                  price: variant.price,
+                  salePrice: variant.salePrice || null,
+                  colorId: variant.colorId || null,
+                  sizeId: variant.sizeId || null,
+                  inStock: variant.inStock || 0,
+                  weight: variant.weight || null,
+                  dimensions: variant.dimensions || null,
+                })
+                .where(eq(productVariants.id, existingVariant.id));
+
+              // Map the variant ID (handle both temp IDs and real UUIDs)
+              if (variant.id) {
+                variantIdMapping.set(variant.id, existingVariant.id);
+              }
+              updatedVariantIds.add(existingVariant.id);
+
+              console.log(`✅ Updated existing variant: ${existingVariant.sku} (${existingVariant.id})`);
+            } else {
+              // CREATE: New variant, insert it
+              const [newVariant] = await tx
+                .insert(productVariants)
+                .values({
+                  productId,
+                  sku: variant.sku!,
+                  price: variant.price,
+                  salePrice: variant.salePrice || null,
+                  colorId: variant.colorId || null,
+                  sizeId: variant.sizeId || null,
+                  inStock: variant.inStock || 0,
+                  weight: variant.weight || null,
+                  dimensions: variant.dimensions || null,
+                })
+                .returning({ id: productVariants.id });
+
+              // Map the variant ID
+              if (variant.id) {
+                variantIdMapping.set(variant.id, newVariant.id);
+              }
+              updatedVariantIds.add(newVariant.id);
+
+              console.log(`✅ Created new variant: ${variant.sku} (${newVariant.id})`);
             }
-          });
+          }
+        }
+
+        // DELETE: Remove variants that are no longer in the update (and not referenced by cart items)
+        const variantsToDelete = existingVariants.filter(
+          v => !updatedVariantIds.has(v.id)
+        );
+
+        for (const variant of variantsToDelete) {
+          try {
+            await tx
+              .delete(productVariants)
+              .where(eq(productVariants.id, variant.id));
+            console.log(`✅ Deleted orphaned variant: ${variant.sku} (${variant.id})`);
+          } catch (deleteError) {
+            // If deletion fails due to foreign key constraint, log warning but continue
+            const error = deleteError as { code?: string };
+            if (error.code === '23503') {
+              console.warn(
+                `⚠️  Cannot delete variant ${variant.sku} (${variant.id}) - still referenced by cart items. ` +
+                `Variant will remain in database but is no longer associated with this product's active variants.`
+              );
+              // Note: In production, you might want to:
+              // 1. Mark variant as "inactive" instead of deleting
+              // 2. Return a warning to the user
+              // 3. Implement a cleanup job to remove orphaned variants later
+            } else {
+              throw deleteError; // Re-throw unexpected errors
+            }
+          }
         }
       } else {
-        // If switching from configurable to simple, clean up variants
-        await tx.delete(productVariants).where(eq(productVariants.productId, productId));
+        // If switching from configurable to simple, attempt to clean up variants
+        const existingVariants = await tx
+          .select()
+          .from(productVariants)
+          .where(eq(productVariants.productId, productId));
+
+        for (const variant of existingVariants) {
+          try {
+            await tx
+              .delete(productVariants)
+              .where(eq(productVariants.id, variant.id));
+          } catch (deleteError) {
+            const error = deleteError as { code?: string };
+            if (error.code === '23503') {
+              console.warn(
+                `⚠️  Cannot delete variant ${variant.sku} - still referenced by cart items. ` +
+                `Manual cleanup may be required.`
+              );
+            } else {
+              throw deleteError;
+            }
+          }
+        }
       }
 
       // Handle images - replace all existing images
@@ -536,7 +664,7 @@ export async function updateProduct(
             }
             // If it's a temp ID that doesn't exist in mapping, set to null
           }
-          
+
           return {
             productId,
             variantId: realVariantId,
@@ -576,10 +704,10 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
     await db.transaction(async (tx) => {
       // Delete related images (cascade will handle this, but being explicit)
       await tx.delete(productImages).where(eq(productImages.productId, productId));
-      
+
       // Delete related variants (cascade will handle this, but being explicit)
       await tx.delete(productVariants).where(eq(productVariants.productId, productId));
-      
+
       // Delete the product
       await tx.delete(products).where(eq(products.id, productId));
     });
@@ -601,18 +729,18 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
 // Form submission action with redirect
 export async function submitProductForm(data: CompleteProductFormData): Promise<never> {
   const result = await createProduct(data);
-  
+
   if (result.success) {
     redirect('/dashboard/products?success=created');
   } else {
     // Serialize the error data for URL parameters
     const errorParams = new URLSearchParams();
     errorParams.set('error', result.error || 'Unknown error');
-    
+
     if (result.fieldErrors) {
       errorParams.set('fieldErrors', JSON.stringify(result.fieldErrors));
     }
-    
+
     redirect(`/dashboard/products/new?${errorParams.toString()}`);
   }
 }
@@ -620,18 +748,18 @@ export async function submitProductForm(data: CompleteProductFormData): Promise<
 // Update form submission action with redirect
 export async function submitProductUpdateForm(productId: string, data: CompleteProductFormData): Promise<never> {
   const result = await updateProduct(productId, data);
-  
+
   if (result.success) {
     redirect('/dashboard/products?success=updated');
   } else {
     // Serialize the error data for URL parameters
     const errorParams = new URLSearchParams();
     errorParams.set('error', result.error || 'Unknown error');
-    
+
     if (result.fieldErrors) {
       errorParams.set('fieldErrors', JSON.stringify(result.fieldErrors));
     }
-    
+
     redirect(`/dashboard/products/${productId}/edit?${errorParams.toString()}`);
   }
 }

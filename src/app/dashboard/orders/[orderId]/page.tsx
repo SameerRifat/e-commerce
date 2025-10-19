@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCurrentUser } from '@/lib/auth/actions';
-import { getDashboardOrder } from '@/lib/actions/dashboard/orders'; // CHANGED: Use dashboard-specific function
+import { getDashboardOrder } from '@/lib/actions/dashboard/orders';
 import { DashboardOrderDetail } from '@/components/dashboard/orders/dashboard-order-detail';
 
 function OrderDetailSkeleton() {
@@ -43,7 +43,6 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
     //     redirect('/');
     // }
 
-    // CHANGED: Use getDashboardOrder instead of getOrder
     const orderResult = await getDashboardOrder(orderId);
 
     if (!orderResult.success || !orderResult.order) {

@@ -25,6 +25,7 @@ export default function VerificationPendingPage() {
                 toast.error(result.message || "Failed to send email");
             }
         } catch (error) {
+            console.error("Resend verification error:", error);
             toast.error("An error occurred. Please try again.");
         } finally {
             setIsResending(false);

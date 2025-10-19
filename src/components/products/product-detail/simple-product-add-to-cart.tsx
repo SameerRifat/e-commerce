@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 interface SimpleProductAddToCartProps {
   productId: string;
   productName: string;
+  productSlug: string;
   product: {
     id: string;
     name: string;
@@ -33,6 +34,7 @@ interface SimpleProductAddToCartProps {
 export default function SimpleProductAddToCart({
   productId,
   productName,
+  productSlug,
   product,
 }: SimpleProductAddToCartProps) {
   const { addItem, formatPrice, error, clearError, items } = useCartStore();
@@ -52,6 +54,7 @@ export default function SimpleProductAddToCart({
 
     return {
       name: productName,
+      slug: productSlug,
       price: parseFloat(selectedProduct.price),
       salePrice: selectedProduct.salePrice ? parseFloat(selectedProduct.salePrice) : undefined,
       image: undefined,
@@ -93,18 +96,22 @@ export default function SimpleProductAddToCart({
 
     const optimisticDetails = getOptimisticProductDetails();
 
-    toast.success(
-      <div className="flex items-center gap-2">
-        <Check className="h-4 w-4" />
-        <span>Added to cart!</span>
-      </div>
-    );
+    // ❌ REMOVED: Don't show success toast here
+    // toast.success(...)
 
     try {
       const success = await addItem(selectedProduct.id, null, true, quantity, optimisticDetails);
 
-      if (!success) {
-        toast.error('Failed to add item to cart. Your cart has been restored.');
+      if (success) {
+        // ✅ Show success toast ONLY after server confirms
+        toast.success(
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            <span>Added to cart!</span>
+          </div>
+        );
+      } else {
+        toast.error('Failed to add item to cart. Please try again.');
       }
     } finally {
       setIsAdding(false);
@@ -223,7 +230,7 @@ export default function SimpleProductAddToCart({
         <Button
           onClick={handleAddToCart}
           disabled={!selectedProduct || selectedProduct.inStock === 0 || isAdding}
-          className="h-12 text-base font-medium"
+          className="h-12 text-base font-medium cursor-pointer"
           size="lg"
         >
           {isAdding ? (
@@ -239,45 +246,6 @@ export default function SimpleProductAddToCart({
           )}
         </Button>
       </div>
-
-      {/* Product Specifications - Useful Info Only */}
-      {(product.sku || product.weight || product.dimensions) && (
-        <>
-          <Separator />
-          <div className="space-y-3">
-            <h3 className="font-medium text-gray-900">Product Information</h3>
-            <div className="text-sm text-gray-600 space-y-2">
-              {product.sku && (
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-500">Item Code:</span>
-                  <span className="font-medium">{product.sku}</span>
-                </div>
-              )}
-              {product.weight && (
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-500">Weight:</span>
-                  <span className="font-medium">{product.weight}g</span>
-                </div>
-              )}
-              {product.dimensions && (
-                product.dimensions.length ||
-                product.dimensions.width ||
-                product.dimensions.height
-              ) && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-500">Dimensions:</span>
-                    <span className="font-medium">
-                      {product.dimensions.length || 0} × {product.dimensions.width || 0} × {product.dimensions.height || 0} cm
-                    </span>
-                  </div>
-                )}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
