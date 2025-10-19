@@ -30,24 +30,6 @@ function StatsLoading() {
     );
 }
 
-function TableLoading() {
-    return (
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-[200px]" />
-                <Skeleton className="h-4 w-[300px]" />
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {Array.from({ length: 10 }).map((_, i) => (
-                        <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
-
 interface OrdersPageProps {
     searchParams: Promise<{
         status?: string;
@@ -79,7 +61,7 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
     if (!ordersResult.success) {
         return (
             <Card>
-                <CardContent className="pt-6">
+                <CardContent>
                     <div className="text-center py-12">
                         <p className="text-muted-foreground">Failed to load orders</p>
                     </div>

@@ -1,3 +1,4 @@
+// src/components/cart/CartPageClient.tsx
 'use client';
 
 import Image from "next/image";
@@ -31,7 +32,6 @@ export function CartPageClient({ initialItems, initialTotal, user }: CartPageCli
     formatPrice,
     syncWithServer 
   } = useCartStore();
-  console.log('items:', JSON.stringify(items, null, 2));
 
   const [mounted, setMounted] = useState(false);
 
@@ -52,6 +52,9 @@ export function CartPageClient({ initialItems, initialTotal, user }: CartPageCli
     name: item.isSimpleProduct && item.product 
       ? item.product.name 
       : item.variant?.product.name || 'Unknown Product',
+    slug: item.isSimpleProduct && item.product 
+      ? item.product.slug 
+      : item.variant?.product.slug || '',
     price: item.isSimpleProduct && item.product
       ? parseFloat(item.product.price)
       : item.variant ? parseFloat(item.variant.price) : 0,
@@ -159,12 +162,16 @@ export function CartPageClient({ initialItems, initialTotal, user }: CartPageCli
               {/* Product Details */}
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2">
-                  <Link 
-                    href={`/products/${item.productId}`}
-                    className="hover:text-primary transition-colors"
-                  >
-                    {item.name}
-                  </Link>
+                  {item.slug ? (
+                    <Link 
+                      href={`/products/${item.slug}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  ) : (
+                    <span>{item.name}</span>
+                  )}
                 </h3>
                 
                 {/* Variant Details */}
@@ -210,7 +217,7 @@ export function CartPageClient({ initialItems, initialTotal, user }: CartPageCli
                 )}
 
                 {/* Optimistic Update Indicator - Only for destructive operations */}
-                {shouldShowProgressUI(item) && (
+                {/* {shouldShowProgressUI(item) && (
                   <div className="mb-3">
                     <span className="text-sm px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex items-center gap-2">
                       <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
@@ -218,7 +225,7 @@ export function CartPageClient({ initialItems, initialTotal, user }: CartPageCli
                        item.pendingOperation === 'remove' ? 'Removing...' : 'Processing...'}
                     </span>
                   </div>
-                )}
+                )} */}
 
                 {/* Quantity Controls */}
                 <div className="flex items-center gap-3">

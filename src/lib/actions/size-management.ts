@@ -17,7 +17,7 @@ export type ActionResult<T = unknown> = {
 };
 
 // Enhanced size type with variant count and category
-export interface SizeWithStats extends SelectSize {
+export interface SizeWithStats extends SelectSize, Record<string, unknown> {
   variantCount: number;
   categoryName?: string;
 }

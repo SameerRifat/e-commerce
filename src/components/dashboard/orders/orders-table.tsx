@@ -38,7 +38,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Eye,
     MoreHorizontal,
-    Edit,
     Trash2,
     ChevronLeft,
     ChevronRight,
@@ -52,6 +51,9 @@ import { toast } from 'sonner';
 import { DashboardOrder } from '@/lib/actions/dashboard/orders';
 import { updateDashboardOrderStatus, bulkUpdateOrderStatus, deleteOrder } from '@/lib/actions/dashboard/orders';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/utils/order-helpers';
+import { formatDate } from '@/lib/utils';
+
+type OrderStatus = 'pending' | 'processing' | 'paid' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
 interface OrdersTableProps {
     orders: DashboardOrder[];
@@ -73,18 +75,8 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
         return `Rs.${amount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
     };
 
-    const formatDate = (date: Date) => {
-        return new Intl.DateTimeFormat('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(new Date(date));
-    };
-
     const getStatusIcon = (status: string) => {
-        const icons: Record<string, any> = {
+        const icons: Record<string, React.ComponentType<{ className?: string }>> = {
             delivered: CheckCircle2,
             out_for_delivery: Truck,
             shipped: Truck,
@@ -110,7 +102,7 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
         );
     };
 
-    const handleBulkStatusUpdate = async (status: any) => {
+    const handleBulkStatusUpdate = async (status: OrderStatus) => {
         if (selectedOrders.length === 0) return;
 
         setIsUpdating(true);
@@ -123,14 +115,15 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
             } else {
                 toast.error(result.error || 'Failed to update orders');
             }
-        } catch (error) {
+        } catch (err) {
+            console.error('Bulk update error:', err);
             toast.error('An error occurred');
         } finally {
             setIsUpdating(false);
         }
     };
 
-    const handleStatusChange = async (orderId: string, newStatus: any) => {
+    const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
         setIsUpdating(true);
         try {
             const result = await updateDashboardOrderStatus(orderId, newStatus);
@@ -140,7 +133,8 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
             } else {
                 toast.error(result.error || 'Failed to update status');
             }
-        } catch (error) {
+        } catch (err) {
+            console.error('Status update error:', err);
             toast.error('An error occurred');
         } finally {
             setIsUpdating(false);
@@ -159,7 +153,8 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
             } else {
                 toast.error(result.error || 'Failed to delete order');
             }
-        } catch (error) {
+        } catch (err) {
+            console.error('Delete order error:', err);
             toast.error('An error occurred');
         }
     };
@@ -173,7 +168,7 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
     if (orders.length === 0) {
         return (
             <Card>
-                <CardContent className="pt-6">
+                <CardContent>
                     <div className="text-center py-12">
                         <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-semibold mb-2">No orders found</h3>

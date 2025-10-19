@@ -1,3 +1,4 @@
+// src/components/Sort.tsx (ENHANCED)
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -12,23 +13,47 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-const OPTIONS = [
-  { label: "Featured", value: "featured" },
+// Define sort options with proper typing
+const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },
-  { label: "Price (High → Low)", value: "price_desc" },
   { label: "Price (Low → High)", value: "price_asc" },
+  { label: "Price (High → Low)", value: "price_desc" },
 ] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
+// Helper to validate sort value
+function isValidSortValue(value: string | null): value is SortValue {
+  return SORT_OPTIONS.some((opt) => opt.value === value);
+}
 
 export default function Sort() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = useMemo(() => `?${searchParams.toString()}`, [searchParams]);
-  const selected = searchParams.get("sort") ?? "featured";
+  
+  const sortParam = searchParams.get("sort");
+  const selected = isValidSortValue(sortParam) ? sortParam : "newest";
 
   const onChange = (value: string) => {
+    // Validate the value
+    if (!isValidSortValue(value)) {
+      console.error(`Invalid sort value: ${value}`);
+      return;
+    }
+
+    // Set sort parameter
     const withSort = setParam(pathname, search, "sort", value);
-    const withPageReset = setParam(pathname, new URL(withSort, "http://dummy").search, "page", "1");
+    
+    // Reset to page 1 when changing sort
+    const withPageReset = setParam(
+      pathname,
+      new URL(withSort, "http://dummy").search,
+      "page",
+      "1"
+    );
+    
     router.push(withPageReset, { scroll: false });
   };
 
@@ -38,11 +63,11 @@ export default function Sort() {
         Sort by
       </Label>
       <Select value={selected} onValueChange={onChange}>
-        <SelectTrigger id="sort-select" className="w-[180px]">
+        <SelectTrigger id="sort-select" className="w-[200px]">
           <SelectValue placeholder="Select sort order" />
         </SelectTrigger>
         <SelectContent>
-          {OPTIONS.map((option) => (
+          {SORT_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>

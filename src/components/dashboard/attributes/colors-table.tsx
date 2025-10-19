@@ -91,35 +91,44 @@ const ColorsTable: React.FC<ColorsTableProps> = ({
     {
       key: "hexCode",
       label: "Color",
-      render: (hexCode: string, color: ColorWithStats) => (
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm"
-            style={{ backgroundColor: hexCode }}
-            title={hexCode}
-          />
-          <div>
-            <div className="font-medium">{color.name}</div>
-            <div className="text-sm text-gray-500 font-mono">{hexCode}</div>
+      render: (value: unknown, color: ColorWithStats) => {
+        const hexCode = value as string;
+        return (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm"
+              style={{ backgroundColor: hexCode }}
+              title={hexCode}
+            />
+            <div>
+              <div className="font-medium">{color.name}</div>
+              <div className="text-sm text-gray-500 font-mono">{hexCode}</div>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: "slug",
       label: "Slug",
-      render: (slug: string) => (
-        <span className="text-sm text-gray-600">/{slug}</span>
-      ),
+      render: (value: unknown) => {
+        const slug = value as string;
+        return (
+          <span className="text-sm text-gray-600">/{slug}</span>
+        );
+      },
     },
     {
       key: "variantCount",
       label: "Used in Variants",
-      render: (count: number) => (
-        <Badge variant={count > 0 ? "default" : "secondary"}>
-          {count}
-        </Badge>
-      ),
+      render: (value: unknown) => {
+        const count = value as number;
+        return (
+          <Badge variant={count > 0 ? "default" : "secondary"}>
+            {count}
+          </Badge>
+        );
+      },
     },
   ];
 

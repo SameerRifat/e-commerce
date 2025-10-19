@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export interface LazySelectOption {
   value: string;
   label: string;
-  meta?: Record<string, any>; // For additional data like hexCode, logoUrl, etc.
+  meta?: Record<string, unknown>; // Changed from 'any' to 'unknown'
 }
 
 interface LazySelectProps {
@@ -54,14 +54,29 @@ export function LazySelect({
   const [isLoading, setIsLoading] = React.useState(false);
   const [hasLoaded, setHasLoaded] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // Memoize loadOptions to prevent unnecessary re-renders
+  const loadOptions = React.useCallback(async (search?: string) => {
+    setIsLoading(true);
+    try {
+      const data = await fetchOptions(search);
+      setOptions(data);
+      setHasLoaded(true);
+    } catch (error) {
+      console.error("Failed to load options:", error);
+      setOptions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchOptions]);
 
   // Load options when dropdown opens (lazy loading)
   React.useEffect(() => {
     if (open && !hasLoaded) {
       loadOptions();
     }
-  }, [open]);
+  }, [open, hasLoaded, loadOptions]);
 
   // Debounced search
   React.useEffect(() => {
@@ -80,21 +95,7 @@ export function LazySelect({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery]);
-
-  const loadOptions = async (search?: string) => {
-    setIsLoading(true);
-    try {
-      const data = await fetchOptions(search);
-      setOptions(data);
-      setHasLoaded(true);
-    } catch (error) {
-      console.error("Failed to load options:", error);
-      setOptions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [searchQuery, hasLoaded, loadOptions]);
 
   const selectedOption = options.find((option) => option.value === value);
 

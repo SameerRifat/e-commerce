@@ -9,37 +9,31 @@ import { notFound } from "next/navigation";
 import type { CompleteProductFormData } from "@/lib/validations/product-form";
 
 interface EditProductPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 const EditProductPage = async ({ params }: EditProductPageProps) => {
   try {
+    const resolvedParams = await params;
+    const productId = resolvedParams.id;
+
     // Fetch both reference data and product data in parallel
     const [referenceData, productData] = await Promise.all([
       getProductFormReferenceData(),
-      getProduct(params.id),
+      getProduct(productId),
     ]);
 
     // If product not found, show 404
     if (!productData) {
       notFound();
     }
-
-    console.log("📦 Loading product for edit:", {
-      id: params.id,
-      name: productData.product.name,
-      productType: productData.product.productType,
-      variantCount: productData.variants.length,
-      imageCount: productData.images.length,
-    });
-
     // Helper function to safely parse dimensions
     const parseDimensions = (dimensions: unknown): { length?: number; width?: number; height?: number } | null => {
       if (!dimensions || typeof dimensions !== 'object') return null;
       
-      const dim = dimensions as any;
+      const dim = dimensions as Record<string, unknown>;
       const result: { length?: number; width?: number; height?: number } = {};
       
       if (typeof dim.length === 'number' && dim.length > 0) result.length = dim.length;
@@ -53,11 +47,12 @@ const EditProductPage = async ({ params }: EditProductPageProps) => {
     const initialData: CompleteProductFormData = {
       // Basic Info
       name: productData.product.name,
+      slug: productData.product.slug,
       description: productData.product.description || "",
       categoryId: productData.product.categoryId || null,
       genderId: productData.product.genderId || null,
       brandId: productData.product.brandId || null,
-      isPublished: productData.product.isPublished,
+      isPublished: productData.product.isPublished ?? false, // FIX: Handle undefined with nullish coalescing
       productType: productData.product.productType,
       
       // Simple product fields (only populate if it's a simple product)
@@ -110,13 +105,11 @@ const EditProductPage = async ({ params }: EditProductPageProps) => {
         })),
     };
 
-    console.log('[EditProductPage] initialData: ', JSON.stringify(initialData, null, 2))
-
     return (
       <ErrorBoundary>
         <UnifiedProductForm 
           mode="edit" 
-          productId={params.id}
+          productId={productId}
           referenceData={referenceData}
           initialData={initialData}
         />

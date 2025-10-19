@@ -4,7 +4,9 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema/index";
 import { v4 as uuidv4 } from "uuid";
-import {nextCookies} from "better-auth/next-js";
+import { nextCookies } from "better-auth/next-js";
+import { admin } from "better-auth/plugins";
+import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -16,17 +18,63 @@ export const auth = betterAuth({
       verification: schema.verifications,
     },
   }),
+
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: true,
+    
+    sendResetPassword: async ({ user, url, token }, request) => {
+      await sendPasswordResetEmail({
+        email: user.email,
+        url,
+        token,
+      });
+    },
+    
+    resetPasswordTokenExpiresIn: 3600,
   },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url, token }, request) => {
+      await sendVerificationEmail({
+        email: user.email,
+        url,
+        token,
+      });
+    },
+  },
+
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "user",
+        input: false,
+      },
+    },
+  },
+
   socialProviders: {},
+
   sessions: {
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 60 * 24 * 7
-    }
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      // CRITICAL: Include the role field in cookie cache
+      include: [
+        "user.id",
+        "user.name",
+        "user.email",
+        "user.emailVerified",
+        "user.image",
+        "user.role", // Make sure this is included!
+      ],
+    },
   },
+
   cookies: {
     sessionToken: {
       name: "auth_session",
@@ -35,14 +83,23 @@ export const auth = betterAuth({
         secure: process.env.NODE_ENV === "production",
         sameSite: 'strict',
         path: '/',
-        maxAge: 60 * 60 * 24 * 7,
-      }
-    }
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      },
+    },
   },
+
   advanced: {
     database: {
-      generateId: () => uuidv4()
-    }
+      generateId: () => uuidv4(),
+    },
   },
-  plugins: [nextCookies()]
+
+  plugins: [
+    nextCookies(),
+    admin({
+      defaultRole: "user",
+      adminRoles: ["admin"],
+      adminUserIds: [],
+    }),
+  ],
 });

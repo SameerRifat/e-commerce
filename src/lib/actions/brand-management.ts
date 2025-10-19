@@ -19,10 +19,10 @@ export type ActionResult<T = unknown> = {
 };
 
 // Enhanced brand type with product count
-export interface BrandWithStats extends SelectBrand {
+export type BrandWithStats = SelectBrand & {
   productCount: number;
   createdAt: Date;
-}
+} & Record<string, unknown>;
 
 // Get all brands with statistics
 export async function getBrands(): Promise<BrandWithStats[]> {

@@ -4,14 +4,14 @@ import CategoryForm from "@/components/dashboard/categories/category-form";
 import { getAvailableParentCategories } from "@/lib/actions/category-management";
 
 interface NewCategoryPageProps {
-  searchParams: {
+  searchParams: Promise<{
     error?: string;
     fieldErrors?: string;
-  };
+  }>;
 }
 
-
 export default async function NewCategoryPage({ searchParams }: NewCategoryPageProps) {
+  // Await the searchParams Promise
   const params = await searchParams;
   const availableParentCategories = await getAvailableParentCategories();
   

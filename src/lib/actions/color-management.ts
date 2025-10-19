@@ -17,7 +17,7 @@ export type ActionResult<T = unknown> = {
 };
 
 // Enhanced color type with variant count
-export interface ColorWithStats extends SelectColor {
+export interface ColorWithStats extends SelectColor, Record<string, unknown> {
   variantCount: number;
 }
 

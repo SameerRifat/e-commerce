@@ -114,7 +114,7 @@ function AccessDenied() {
 function OrderError({ message }: { message: string }) {
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Order</h3>
@@ -197,19 +197,6 @@ export default async function CheckoutSuccessPage({
 
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <nav className="mb-8 text-sm text-gray-600">
-        <Link href="/" className="hover:text-gray-900 transition-colors">
-          Home
-        </Link>
-        <span className="mx-2">•</span>
-        <Link href="/checkout" className="hover:text-gray-900 transition-colors">
-          Checkout
-        </Link>
-        <span className="mx-2">•</span>
-        <span className="text-gray-900">Order Confirmation</span>
-      </nav>
-
       {/* Order Confirmation Content */}
       <Suspense fallback={<OrderConfirmationSkeleton />}>
         <OrderConfirmationContent orderId={orderId} />

@@ -14,6 +14,7 @@ erDiagram
         text email UK
         boolean email_verified
         text image
+        text role
         timestamp created_at
         timestamp updated_at
     }
@@ -115,6 +116,7 @@ erDiagram
     products {
         uuid id PK
         text name
+        text slug UK
         text description
         uuid category_id FK
         uuid gender_id FK

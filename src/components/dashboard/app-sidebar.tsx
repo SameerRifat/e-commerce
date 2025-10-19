@@ -2,9 +2,9 @@
 "use client"
 
 import * as React from "react"
-import { Package, Palette, Layers, Images, Command, Boxes, Sparkles, LifeBuoy, Send, Frame, PieChart, ShoppingBag, Monitor} from "lucide-react"
+import { Package, Palette, Layers, Command, Boxes, Sparkles, ShoppingBag, Monitor, Users } from "lucide-react"
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem} from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { NavMain } from "./nav-main"
 
 const data = {
@@ -28,10 +28,6 @@ const data = {
                     title: "Create Product",
                     url: "/dashboard/products/new",
                 },
-                {
-                    title: "Manage Variants",
-                    url: "/dashboard/products/variants",
-                },
             ],
         },
         {
@@ -54,6 +50,25 @@ const data = {
                 {
                     title: "Shipped",
                     url: "/dashboard/orders?status=shipped",
+                },
+            ],
+        },
+        {
+            title: "Users",
+            url: "/dashboard/users",
+            icon: Users,
+            items: [
+                {
+                    title: "All Users",
+                    url: "/dashboard/users",
+                },
+                {
+                    title: "Admins",
+                    url: "/dashboard/users?role=admin",
+                },
+                {
+                    title: "Customers",
+                    url: "/dashboard/users?role=user",
                 },
             ],
         },
@@ -132,50 +147,6 @@ const data = {
                 },
             ],
         },
-        {
-            title: "Media",
-            url: "/dashboard/media",
-            icon: Images,
-            items: [
-                {
-                    title: "Image Library",
-                    url: "/dashboard/media",
-                },
-                {
-                    title: "Upload Images",
-                    url: "/dashboard/media/upload",
-                },
-            ],
-        },
-    ],
-    navSecondary: [
-        {
-            title: "Support",
-            url: "#",
-            icon: LifeBuoy,
-        },
-        {
-            title: "Feedback",
-            url: "#",
-            icon: Send,
-        },
-    ],
-    projects: [
-        {
-            name: "Design Engineering",
-            url: "#",
-            icon: Frame,
-        },
-        {
-            name: "Sales & Marketing",
-            url: "#",
-            icon: PieChart,
-        },
-        {
-            name: "Travel",
-            url: "#",
-            icon: Map,
-        },
     ],
 }
 
@@ -186,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <a href="#">
+                            <a href="/dashboard">
                                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                                     <Command className="size-4" />
                                 </div>

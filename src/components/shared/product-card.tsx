@@ -1,11 +1,15 @@
+// src/components/shared/product-card.tsx
 'use client'
 
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Star, Eye } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 export interface ProductCardProps {
+  id?: string; // for internal use
+  slug: string; // Required for links
   title: string;
   description?: string;
   subtitle?: string;
@@ -16,13 +20,15 @@ export interface ProductCardProps {
   price?: string | number;
   salePrice?: string | number | null;
   discountPercentage?: number | null;
-  href?: string;
+  href?: string; // If provided, overrides default slug-based link
   className?: string;
   averageRating?: number | null;
   reviewCount?: number;
 }
 
 export default function ProductCard({
+  id,
+  slug,
   title,
   description,
   subtitle,
@@ -42,13 +48,13 @@ export default function ProductCard({
 
   // Parse prices
   const originalPrice = price === undefined ? undefined : typeof price === "number" ? price : parseFloat(price);
-  const salePriceValue = salePrice === undefined || salePrice === null 
-    ? null 
+  const salePriceValue = salePrice === undefined || salePrice === null
+    ? null
     : typeof salePrice === "number" ? salePrice : parseFloat(salePrice);
 
   // Determine if there's an active discount
   const hasDiscount = salePriceValue !== null && originalPrice !== undefined && salePriceValue < originalPrice;
-  
+
   // Show discount badge only if discount is 5% or more
   const showDiscountBadge = hasDiscount && discountPercentage !== null && discountPercentage !== undefined && discountPercentage >= 5;
 
@@ -65,11 +71,10 @@ export default function ProductCard({
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-3 w-3 ${
-          i < Math.floor(rating)
-            ? "text-yellow-400 fill-current"
-            : "text-gray-300"
-        }`}
+        className={`h-3 w-3 ${i < Math.floor(rating)
+          ? "text-yellow-400 fill-current"
+          : "text-gray-300"
+          }`}
       />
     ));
   };
@@ -77,8 +82,11 @@ export default function ProductCard({
   // Determine which image to show
   const currentImageSrc = isHovered && hoverImageSrc ? hoverImageSrc : imageSrc;
 
+  // Generate link - use provided href or default to slug-based URL
+  const linkUrl = href || `/products/${slug}`;
+
   const content = (
-    <div 
+    <div
       className="group overflow-hidden relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -96,27 +104,12 @@ export default function ProductCard({
 
         {/* Discount Badge - Top Left */}
         {showDiscountBadge && (
-          <div className="absolute top-2 left-2 z-10">
-            <div className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
+          <div className="absolute top-0 left-0 z-10">
+            <Badge className="!rounded-tl-none !rounded-bl-none">
               {discountPercentage}% OFF
-            </div>
+            </Badge>
           </div>
         )}
-
-        {/* Quick Actions - Top Right */}
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            className="p-2 bg-white rounded-full shadow-lg hover:bg-orange-500 hover:text-white transition-colors"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // TODO: Add to wishlist functionality
-            }}
-            aria-label="Add to wishlist"
-          >
-            <Heart className="h-4 w-4" />
-          </button>
-        </div>
 
         {/* View Details Overlay - Bottom */}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -130,7 +123,10 @@ export default function ProductCard({
       {/* Product Info */}
       <div className="p-0 pt-2 sm:pt-3">
         {/* Product Name */}
-        <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 line-clamp-2 group-hover:text-orange-500 transition-colors">
+        <h3
+          className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 line-clamp-1 group-hover:text-orange-500 transition-colors"
+          title={title}
+        >
           {title}
         </h3>
 
@@ -195,9 +191,9 @@ export default function ProductCard({
     </div>
   );
 
-  return href ? (
+  return linkUrl ? (
     <Link
-      href={href}
+      href={linkUrl}
       aria-label={title}
     >
       {content}

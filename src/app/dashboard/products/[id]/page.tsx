@@ -13,11 +13,12 @@ import { renderPrice, renderDate } from "@/components/dashboard/data-table";
 import { getDashboardProduct } from "@/lib/actions/dashboard-products";
 
 interface ProductViewPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const ProductViewPage: React.FC<ProductViewPageProps> = async ({ params }) => {
-  const productId = params.id;
+  // Await the params Promise
+  const { id: productId } = await params;
 
   if (!productId) {
     notFound();

@@ -1,5 +1,4 @@
 // src/components/profile/orders/orders-page-client.tsx
-
 'use client';
 
 import { useState } from 'react';
@@ -8,22 +7,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Package, 
-  ShoppingBag, 
-  Eye, 
-  CheckCircle2, 
-  Clock, 
-  Truck, 
+import {
+  Package,
+  ShoppingBag,
+  Eye,
+  CheckCircle2,
+  Clock,
+  Truck,
   XCircle,
   Calendar,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { OrderWithDetails } from '@/lib/actions/orders';
-import { 
-  formatPrice, 
-  generateOrderNumber, 
-  ORDER_STATUS_LABELS, 
+import { OrderStatus, OrderWithDetails } from '@/lib/actions/orders';
+import {
+  formatPrice,
+  generateOrderNumber,
+  ORDER_STATUS_LABELS,
   ORDER_STATUS_COLORS,
   estimateDeliveryDate,
 } from '@/lib/utils/order-helpers';
@@ -34,8 +33,18 @@ interface OrdersPageClientProps {
   initialOrders: OrderWithDetails[];
 }
 
+interface ShippingAddress {
+  id: string;
+  fullName: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  phone: string | null;
+}
+
 export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
-  console.log('initialOrders: ', JSON.stringify(initialOrders, null, 2));
   const [orders, setOrders] = useState<OrderWithDetails[]>(initialOrders);
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
 
@@ -88,8 +97,8 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
       const result = await cancelOrder(orderId);
 
       if (result.success) {
-        setOrders(prev => prev.map(order => 
-          order.id === orderId 
+        setOrders(prev => prev.map(order =>
+          order.id === orderId
             ? { ...order, status: 'cancelled' as const }
             : order
         ));
@@ -107,14 +116,14 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
 
   const handleReorder = async (order: OrderWithDetails) => {
     try {
-      // Implementation would add items back to cart
+      // TODO: Implement reorder functionality
       toast.success('Items added to cart');
     } catch (error) {
       toast.error('Failed to add items to cart');
     }
   };
 
-  const formatAddress = (address: any) => {
+  const formatAddress = (address: ShippingAddress | null | undefined) => {
     if (!address) return 'No address provided';
     const parts = [
       address.line1,
@@ -133,17 +142,18 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
     }).format(new Date(date));
   };
 
-  const getDeliveryStatus = (orderDate: Date, status: string) => {
+  const getDeliveryStatus = (orderDate: Date, status: OrderStatus) => {
     if (status === 'delivered') return 'Delivered';
     if (status === 'cancelled') return 'Cancelled';
-    
+
     const estimatedDate = estimateDeliveryDate(orderDate, status);
-    
+
     return `Est. ${new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric'
     }).format(estimatedDate)}`;
   };
+
 
   if (orders.length === 0) {
     return (
@@ -273,17 +283,22 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
                   </div>
                 )}
 
-                {/* Order Items Preview */}
+                {/* Order Items Preview - NOW WITH orderStatus PROP */}
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-muted-foreground">
                     Order Items
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {order.items.slice(0, 2).map((item) => (
-                      <OrderItemDisplay key={item.id} item={item} />
+                      <OrderItemDisplay 
+                        key={item.id} 
+                        item={item}
+                        showFullDetails={false}
+                        orderStatus={order.status} // ✅ PASS ORDER STATUS
+                      />
                     ))}
                   </div>
-                  
+
                   {order.items.length > 2 && (
                     <div className="text-center pt-2">
                       <Button variant="ghost" size="sm" asChild>

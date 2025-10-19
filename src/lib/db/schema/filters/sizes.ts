@@ -30,5 +30,15 @@ export const insertSizeSchema = z.object({
 export const selectSizeSchema = insertSizeSchema.extend({
   id: z.string().uuid(),
 });
+
+export const selectSizeWithCategorySchema = selectSizeSchema.extend({
+  category: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    createdAt: z.date(),
+  }).nullable().optional(),
+});
+
 export type InsertSize = z.infer<typeof insertSizeSchema>;
 export type SelectSize = z.infer<typeof selectSizeSchema>;
+export type SelectSizeWithCategory = z.infer<typeof selectSizeWithCategorySchema>;

@@ -1,4 +1,4 @@
-// src/store/cart.ts - Enhanced with Optimistic Updates and Race Condition Prevention
+// src/store/cart.ts 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
@@ -17,6 +17,7 @@ interface CartItem {
   isSimpleProduct: boolean;
   quantity: number;
   name: string;
+  slug: string;
   price: number;
   salePrice?: number;
   image?: string;
@@ -76,6 +77,7 @@ function transformCartItem(serverItem: CartItemWithDetails): CartItem {
       isSimpleProduct: true,
       quantity: serverItem.quantity,
       name: serverItem.product.name,
+      slug: serverItem.product.slug,
       price: parseFloat(serverItem.product.price),
       salePrice: serverItem.product.salePrice ? parseFloat(serverItem.product.salePrice) : undefined,
       image: primaryImage?.url,
@@ -94,6 +96,7 @@ function transformCartItem(serverItem: CartItemWithDetails): CartItem {
       isSimpleProduct: false,
       quantity: serverItem.quantity,
       name: serverItem.variant.product.name,
+      slug: serverItem.variant.product.slug,
       price: parseFloat(serverItem.variant.price),
       salePrice: serverItem.variant.salePrice ? parseFloat(serverItem.variant.salePrice) : undefined,
       image: primaryImage?.url,
@@ -176,6 +179,7 @@ export const useCartStore = create<CartState>()(
             isSimpleProduct,
             quantity,
             name: productDetails?.name || 'Loading...',
+            slug: productDetails?.slug || '',
             price: productDetails?.price || 0,
             salePrice: productDetails?.salePrice,
             image: productDetails?.image,
@@ -387,13 +391,16 @@ export const useCartStore = create<CartState>()(
 
         // Create the request promise
         const requestPromise = (async () => {
-          // Optimistic update - remove item immediately
-          const newItems = state.items.filter(item => item.id !== cartItemId);
-          const newTotal = calculateTotal(newItems);
+          // ✅ STEP 1: Mark item as pending removal (don't remove yet)
+          const newItems = state.items.map(item =>
+            item.id === cartItemId
+              ? { ...item, pendingOperation: 'remove' as const, isOptimistic: true }
+              : item
+          );
 
           set({
             items: newItems,
-            total: newTotal,
+            total: calculateTotal(newItems), // Total stays the same
             error: null
           });
 
@@ -401,7 +408,12 @@ export const useCartStore = create<CartState>()(
             const result = await removeCartItem({ cartItemId });
 
             if (result.success) {
-              // Item is already removed optimistically, no need to update
+              // ✅ STEP 2: Actually remove the item after server confirms
+              const finalItems = state.items.filter(item => item.id !== cartItemId);
+              set({
+                items: finalItems,
+                total: calculateTotal(finalItems),
+              });
               return true;
             } else {
               throw new Error(result.error || 'Failed to remove item');
@@ -409,8 +421,13 @@ export const useCartStore = create<CartState>()(
           } catch (error) {
             console.error('Failed to remove item from cart:', error);
 
-            // Rollback - add item back
-            const rollbackItems = [...state.items, itemToRemove];
+            // Rollback - remove pending state
+            const rollbackItems = state.items.map(item =>
+              item.id === cartItemId
+                ? { ...item, pendingOperation: undefined, isOptimistic: false }
+                : item
+            );
+
             set({
               items: rollbackItems,
               total: calculateTotal(rollbackItems),

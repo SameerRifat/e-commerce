@@ -3,7 +3,7 @@
 
 import React from "react";
 import { Control } from "react-hook-form";
-import { DollarSign, Package2, Scale, Ruler } from "lucide-react";
+import { DollarSign, Package2, Scale } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   FormControl,
@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { VALIDATION_RULES } from "@/lib/validations/product-form";
+import { CompleteProductFormData } from "@/lib/validations/product-form";
 
 interface ProductPricingStepProps {
-  control: Control<any>;
+  control: Control<CompleteProductFormData>;
 }
 
 const ProductPricingStep: React.FC<ProductPricingStepProps> = ({ control }) => {

@@ -1,10 +1,8 @@
 // src/components/profile/orders/order-actions.tsx
-
 import { Button } from '@/components/ui/button';
 import {
     RefreshCw,
     XCircle,
-    Star,
     AlertCircle,
     Loader2
 } from 'lucide-react';
@@ -25,10 +23,9 @@ export const OrderActions = ({
 }: OrderActionsProps) => {
     const canCancel = order.status === 'pending' && !isLoading;
     const canReorder = ['delivered', 'cancelled'].includes(order.status) && !isLoading;
-    const canReview = order.status === 'delivered' && !isLoading;
 
     // Don't render actions section if no actions are available
-    if (!canCancel && !canReorder && !canReview) {
+    if (!canCancel && !canReorder) {
         return null;
     }
 
@@ -48,14 +45,6 @@ export const OrderActions = ({
                         <XCircle className="w-4 h-4 mr-2" />
                     )}
                     Cancel Order
-                </Button>
-            )}
-
-            {/* Write Review */}
-            {canReview && (
-                <Button variant="outline" size="sm">
-                    <Star className="w-4 h-4 mr-2" />
-                    Write Review
                 </Button>
             )}
 
@@ -81,4 +70,4 @@ export const OrderActions = ({
             )}
         </div>
     );
-};
+}

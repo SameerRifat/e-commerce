@@ -25,6 +25,7 @@ export type HeroSlideWithLinks = SelectHeroSlide & {
     linkedProduct?: {
         id: string;
         name: string;
+        slug: string; // ✅ FIXED: Added slug field
         sku: string | null;
     } | null;
     linkedCollection?: {
@@ -65,10 +66,11 @@ export async function getActiveHeroSlides(): Promise<HeroSlideWithLinks[]> {
                 createdAt: heroSlides.createdAt,
                 updatedAt: heroSlides.updatedAt,
                 
-                // Linked product data (will be null if not linked)
+                // ✅ FIXED: Fetch product slug instead of relying on SKU
                 linkedProduct: {
                     id: products.id,
                     name: products.name,
+                    slug: products.slug, // ✅ CRITICAL FIX: Use slug for URLs
                     sku: products.sku,
                 },
                 
@@ -133,10 +135,11 @@ export async function getAllHeroSlides(): Promise<HeroSlideWithLinks[]> {
                 createdAt: heroSlides.createdAt,
                 updatedAt: heroSlides.updatedAt,
                 
-                // Linked product data
+                // ✅ FIXED: Fetch product slug
                 linkedProduct: {
                     id: products.id,
                     name: products.name,
+                    slug: products.slug, // ✅ CRITICAL FIX
                     sku: products.sku,
                 },
                 
@@ -186,10 +189,11 @@ export async function getHeroSlideById(id: string): Promise<ActionResult<HeroSli
                 createdAt: heroSlides.createdAt,
                 updatedAt: heroSlides.updatedAt,
                 
-                // Linked product data
+                // ✅ FIXED: Fetch product slug
                 linkedProduct: {
                     id: products.id,
                     name: products.name,
+                    slug: products.slug, // ✅ CRITICAL FIX
                     sku: products.sku,
                 },
                 
@@ -225,8 +229,6 @@ export async function getHeroSlideById(id: string): Promise<ActionResult<HeroSli
         };
     }
 }
-
-
 
 // ============================================
 // CREATE: Add new hero slide

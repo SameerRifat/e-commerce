@@ -14,8 +14,24 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { getCurrentUser, checkIsAdmin } from "@/lib/auth/actions";
+import { redirect } from "next/navigation";
 
-export default function Page({ children }: { children: React.ReactNode }) {
+// Mark as dynamic for auth checks
+export const dynamic = 'force-dynamic';
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/sign-in?redirectTo=/dashboard");
+  }
+
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    redirect("/");
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -27,19 +43,6 @@ export default function Page({ children }: { children: React.ReactNode }) {
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">
-                    Dashboard
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Product Management</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
           </div>
         </header>
         <main className="flex-1 py-10 custom_container">

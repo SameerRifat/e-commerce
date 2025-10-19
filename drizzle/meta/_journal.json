@@ -64,6 +64,20 @@
       "when": 1759900433935,
       "tag": "0008_breezy_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1760172831132,
+      "tag": "0009_yielding_karnak",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1760339986916,
+      "tag": "0010_sturdy_iron_man",
+      "breakpoints": true
     }
   ]
 }

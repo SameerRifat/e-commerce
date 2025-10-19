@@ -35,14 +35,12 @@ interface Variant {
 }
 
 interface ProductInventoryStepProps {
-  control: Control<any>;
   variants: Variant[];
   colors: Color[];
   sizes: Size[];
 }
 
 const ProductInventoryStep: React.FC<ProductInventoryStepProps> = ({
-  control,
   variants,
   colors,
   sizes,

@@ -42,7 +42,7 @@ type Props = {
   mode: "sign-in" | "sign-up";
   onSubmit: (
     formData: FormData
-  ) => Promise<{ ok: boolean; userId?: string } | void>;
+  ) => Promise<{ ok: boolean; userId?: string; message?: string } | void>;
 };
 
 export default function AuthForm({ mode, onSubmit }: Props) {
@@ -83,20 +83,24 @@ export default function AuthForm({ mode, onSubmit }: Props) {
       const result = await onSubmit(formData);
 
       if (result?.ok) {
-        toast.success(
-          mode === "sign-in" ? "Welcome back!" : "Account created successfully"
-        );
-        router.push("/");
+        if (mode === "sign-up") {
+          // Don't show toast or redirect for signup
+          // Parent page handles redirect to verification pending
+          return;
+        } else {
+          toast.success("Welcome back!");
+          router.push("/");
+        }
       }
     } catch (error) {
       console.error("Authentication error:", error);
-      
+
       const errorMessage =
         error instanceof Error
           ? error.message
           : mode === "sign-in"
-          ? "Invalid credentials. Please check your email and password."
-          : "Failed to create account. Please try again.";
+            ? "Invalid credentials. Please check your email and password."
+            : "Failed to create account. Please try again.";
 
       toast.error(errorMessage);
     } finally {
@@ -193,9 +197,18 @@ export default function AuthForm({ mode, onSubmit }: Props) {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-caption text-dark-900">
-                  Password
-                </FormLabel>
+                <div className="flex items-center">
+                  <FormLabel className="text-caption text-dark-900">
+                    Password
+                  </FormLabel>
+                  <Link
+                    href="/forgot-password"
+                    className="ml-auto text-sm underline-offset-4 hover:underline"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+
                 <FormControl>
                   <div className="relative">
                     <Input
@@ -233,15 +246,14 @@ export default function AuthForm({ mode, onSubmit }: Props) {
 
           <Button
             type="submit"
-            // className="mt-2 w-full rounded-full bg-dark-900 px-6 py-3 text-body-medium text-light-100 hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-dark-900/20 transition-colors"
             className="mt-2 w-full cursor-pointer"
             disabled={isLoading}
           >
             {isLoading
               ? "Please wait..."
               : mode === "sign-in"
-              ? "Sign In"
-              : "Sign Up"}
+                ? "Sign In"
+                : "Sign Up"}
           </Button>
 
           {mode === "sign-up" && (
