@@ -21,10 +21,10 @@ export default async function ReviewsSection({
   // Get current user
   const user = await getCurrentUser();
 
-  // Fetch initial reviews (page 1)
+  // ✅ FIX: Fetch initial reviews with same limit as ReviewsList expects
   const result = await getProductReviews(productId, {
     page: 1,
-    limit: 5,
+    limit: 1, // Set to 1 for testing pagination
     sortBy: "recent",
   });
 
@@ -42,7 +42,7 @@ export default async function ReviewsSection({
   const totalReviews = stats?.totalReviews || 0;
   const averageRating = stats?.averageRating || 0;
 
-  // ✅ Always check eligibility if user is authenticated
+  // Always check eligibility if user is authenticated
   let userEligibility = null;
   if (user) {
     const eligibilityResult = await checkUserReviewEligibility(productId);
@@ -51,15 +51,13 @@ export default async function ReviewsSection({
     }
   }
 
-  // ✅ NEW: Only show Write button if user hasn't reviewed yet
-  const shouldShowWriteButton = !!(user && 
-    productId && 
-    productName && 
-    userEligibility && 
-    userEligibility.canReview && 
+  // Only show Write button if user hasn't reviewed yet
+  const shouldShowWriteButton = !!(user &&
+    productId &&
+    productName &&
+    userEligibility &&
+    userEligibility.canReview &&
     !userEligibility.hasReview);
-
-  console.log('[ReviewsSection] reviews: ', JSON.stringify(reviews, null, 2))
 
   return (
     <CollapsibleSection
@@ -83,12 +81,12 @@ export default async function ReviewsSection({
       }
     >
       <div className="space-y-6">
-        {/* 1. Reviews Header with Stats (if reviews exist) */}
+        {/* Reviews Header with Stats */}
         {totalReviews > 0 && stats && (
           <ReviewsHeader stats={stats} />
         )}
 
-        {/* 2. Write Review Button - ONLY show if user hasn't reviewed yet */}
+        {/* Write Review Button */}
         {shouldShowWriteButton && userEligibility && (
           <WriteReviewButton
             productId={productId}
@@ -98,7 +96,7 @@ export default async function ReviewsSection({
           />
         )}
 
-        {/* 3. Reviews List or Empty State */}
+        {/* Reviews List or Empty State */}
         {totalReviews === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <p className="text-body">No reviews yet.</p>
@@ -107,13 +105,15 @@ export default async function ReviewsSection({
             </p>
           </div>
         ) : (
-          <ReviewsList
-            productId={productId}
-            productName={productName || "this product"}
-            initialReviews={reviews}
-            initialPagination={pagination!}
-            currentUserId={user?.id}
-          />
+          pagination && (
+            <ReviewsList
+              productId={productId}
+              productName={productName || "this product"}
+              initialReviews={reviews}
+              initialPagination={pagination}
+              currentUserId={user?.id}
+            />
+          )
         )}
       </div>
     </CollapsibleSection>

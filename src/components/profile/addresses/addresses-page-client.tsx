@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { Address } from './types';
 import { AddressFormValues } from '@/lib/validations/address-validation';
 import { useAddressDialog } from './hooks';
-import { PageHeader } from './page-header';
 import { AddressForm } from './address-form';
 import { AddressList } from './address-list';
 import { DeleteConfirmDialog } from './delete-confirm-dialog';
@@ -16,6 +15,7 @@ import {
   setDefaultAddress 
 } from '@/lib/actions/address-management';
 import { toast } from 'sonner';
+import { AddressesPageHeader } from './addresses-page-header';
 
 interface AddressesPageClientProps {
   initialAddresses: Address[];
@@ -182,7 +182,7 @@ export const AddressesPageClient = ({ initialAddresses }: AddressesPageClientPro
 
   return (
     <>
-      <PageHeader onAddAddress={openAddDialog} />
+      <AddressesPageHeader onAddAddress={openAddDialog} />
 
       <AddressList
         addresses={addresses}

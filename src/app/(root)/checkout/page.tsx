@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
 import { initializeCheckout } from '@/lib/actions/checkout';
+import PageHeader from '@/components/shared/page-header';
+import { PageBreadcrumb } from '@/components/shared/page-breadcrumb';
 
 function CheckoutSkeleton() {
   return (
@@ -26,7 +28,7 @@ function CheckoutSkeleton() {
           </Card>
         ))}
       </div>
-      
+
       {/* Right Column */}
       <div className="lg:col-span-1">
         <Card>
@@ -93,32 +95,29 @@ async function CheckoutContent() {
 
 export default async function CheckoutPage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <nav className="mb-8 text-sm text-gray-600">
-        <Link href="/" className="hover:text-gray-900 transition-colors">
-          Home
-        </Link>
-        <span className="mx-2">•</span>
-        <Link href="/cart" className="hover:text-gray-900 transition-colors">
-          Cart
-        </Link>
-        <span className="mx-2">•</span>
-        <span className="text-gray-900">Checkout</span>
-      </nav>
+    <main className="custom_container py-8">
+      {/* Breadcrumb - Using Shadcn component */}
+      <div className='max-w-7xl mx-auto'>
+        <PageBreadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Cart", href: "/cart" },
+            { label: "Checkout" },
+          ]}
+          className="mb-8"
+        />
 
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
-        <p className="text-gray-600">
-          Complete your order by providing shipping and payment information.
-        </p>
+        {/* Page Header */}
+        <PageHeader
+          title="Checkout"
+          subtitle="Complete your order by providing shipping and payment information."
+        />
+
+        {/* Checkout Content */}
+        <Suspense fallback={<CheckoutSkeleton />}>
+          <CheckoutContent />
+        </Suspense>
       </div>
-
-      {/* Checkout Content */}
-      <Suspense fallback={<CheckoutSkeleton />}>
-        <CheckoutContent />
-      </Suspense>
     </main>
   );
 }

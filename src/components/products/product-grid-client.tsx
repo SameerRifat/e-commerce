@@ -6,6 +6,7 @@ import { NormalizedProductFilters } from "@/lib/utils/query";
 import { fetchMoreProducts } from "@/lib/actions/product";
 import ProductCard from "@/components/shared/product-card";
 import { LoadMoreButton } from "./load-more-button";
+import ProductGrid from "@/components/shared/product-grid";
 
 type ProductListItem = {
     id: string;
@@ -87,7 +88,7 @@ export function ProductGridClient({
     return (
         <div>
             {/* Product Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <ProductGrid>
                 {products.map((p) => (
                     <ProductCard
                         key={p.id}
@@ -104,7 +105,7 @@ export function ProductGridClient({
                         reviewCount={p.reviewCount}
                     />
                 ))}
-            </div>
+            </ProductGrid>
 
 
             {/* Error Message */}

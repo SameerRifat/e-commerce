@@ -42,7 +42,7 @@ const getInitials = (name: string) => {
 export function UserSection({ user }: UserSectionProps) {
     if (!user) {
         return (
-            <Button variant="default" size="sm" asChild>
+            <Button variant="default" size="sm" asChild className="text-xs sm:text-sm px-2.5 sm:px-3.5 h-7 sm:!h-9">
                 <Link href="/sign-in">Sign In</Link>
             </Button>
         );
@@ -54,10 +54,10 @@ export function UserSection({ user }: UserSectionProps) {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-2 p-0 sm:px-3 sm:py-5 rounded-full sm:rounded-md"
+                    className="gap-2 !p-0 sm:!px-2.5 rounded-full sm:rounded-md h-fit sm:h-9"
                     aria-label="User menu"
                 >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="!w-6 !h-6 sm:!h-7 sm:!w-7">
                         <AvatarImage src={user.image || undefined} alt={user.name} className="object-cover"/>
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(user.name)}

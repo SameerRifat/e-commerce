@@ -59,11 +59,11 @@ export default function Sort() {
 
   return (
     <div className="inline-flex items-center gap-2">
-      <Label htmlFor="sort-select" className="text-sm font-normal text-foreground">
+      <Label htmlFor="sort-select" className="text-sm font-normal text-foreground shrink-0">
         Sort by
       </Label>
       <Select value={selected} onValueChange={onChange}>
-        <SelectTrigger id="sort-select" className="w-[200px]">
+        <SelectTrigger id="sort-select" className="w-[180px] sm:w-[200px]">
           <SelectValue placeholder="Select sort order" />
         </SelectTrigger>
         <SelectContent>

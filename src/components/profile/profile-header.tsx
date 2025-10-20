@@ -22,22 +22,22 @@ function getUserInitials(name: string): string {
 
 export default function ProfileHeader({ user }: ProfileHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+    <div className="flex flex-wrap sm:items-start gap-6">
       {/* Avatar Section */}
-      <div className="relative group">
-        <Avatar className="h-24 w-24 sm:h-28 sm:w-28 border-4 border-background shadow-lg">
+      <div className="relative group w-fit h-fit">
+        <Avatar className="h-24 w-24 2xl:w-28 2xl:h-28 border-4 border-background shadow-lg">
           {user.image && (
-            <AvatarImage 
-              src={user.image} 
-              alt={user.name || ''} 
+            <AvatarImage
+              src={user.image}
+              alt={user.name || ''}
               className="object-cover"
             />
           )}
-          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-2xl font-bold text-primary-foreground">
+          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-2xl font-semibold text-primary-foreground">
             {getUserInitials(user.name || 'U')}
           </AvatarFallback>
         </Avatar>
-        
+
         {/* Upload Button Overlay */}
         <div className="absolute -bottom-2 -right-2">
           <ProfileImageUploadDialog userId={user.id} currentImage={user.image} />
@@ -47,10 +47,10 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
       {/* User Info Section */}
       <div className="flex-1 space-y-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-lg sm:text-xl xl:text-2xl font-semibold tracking-tight text-foreground">
             {user.name || 'User'}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {user.email}
           </p>
         </div>
@@ -63,7 +63,7 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
               Verified
             </div>
           )}
-          
+
           <div className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
             Member since {formatDate(user.createdAt)}

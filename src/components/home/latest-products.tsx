@@ -4,6 +4,7 @@ import ProductCard from "@/components/shared/product-card";
 import Link from "next/link";
 import SectionHeader from "../shared/section-header";
 import { Button } from "../ui/button";
+import ProductGrid from "@/components/shared/product-grid";
 
 interface Product {
     id: string;
@@ -31,7 +32,7 @@ const LatestProductsSection: React.FC<LatestProductsSectionProps> = ({ products 
                 viewAllHref="/products"
                 viewAllLabel="View All"
             />
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6">
+            <ProductGrid>
                 {products.map((p) => {
                     return (
                         <ProductCard
@@ -50,7 +51,7 @@ const LatestProductsSection: React.FC<LatestProductsSectionProps> = ({ products 
                         />
                     );
                 })}
-            </div>
+            </ProductGrid>
 
             {/* Mobile-only View All Button */}
             <div className="flex justify-center md:hidden mt-6 sm:mt-8">

@@ -111,11 +111,11 @@ export default function AccountInformationSection({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className='px-4 sm:px-6'>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Account Information</CardTitle>
-            <CardDescription>
+            <CardDescription className='mt-2 text-xs sm:text-sm'>
               Manage your personal details and contact information
             </CardDescription>
           </div>
@@ -132,26 +132,26 @@ export default function AccountInformationSection({
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className='px-4 sm:px-6'>
         {!isEditing ? (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <div className="flex w-9 h-9 min-w-9 min-h-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10">
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-muted-foreground">Name</p>
-                <p className="font-medium">{optimisticUser.name || 'Not set'}</p>
+                <p className="text-sm sm:text-base font-medium">{optimisticUser.name || 'Not set'}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <div className="flex w-9 h-9 min-w-9 min-h-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10">
                 <Mail className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p className="font-medium">{optimisticUser.email}</p>
+                <p className="text-sm sm:text-base font-medium">{optimisticUser.email}</p>
               </div>
             </div>
           </div>

@@ -145,7 +145,7 @@ export default function ProductGallery({
 
       {/* Mobile Thumbnail Carousel - Horizontal */}
       {images.length > 1 && isMobile && (
-        <div className="w-full order-2 lg:order-1 lg:hidden mt-2">
+        <div className="w-full order-2 lg:order-1 lg:hidden">
           <Carousel
             setApi={setThumbApi}
             opts={{

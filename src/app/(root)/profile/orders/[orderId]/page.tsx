@@ -10,34 +10,34 @@ import { getCurrentUser } from '@/lib/auth/actions';
 import { getOrder } from '@/lib/actions/orders';
 import { OrderDetailClient } from '@/components/profile/orders/order-detail-client';
 
-// Loading component for order detail
+// Loading component for order detail - FIXED FOR MOBILE
 function OrderDetailSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header Skeleton */}
-      <div className="text-center py-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-        <div className="w-16 h-16 bg-blue-200 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse" />
-        <div className="h-8 bg-gray-200 rounded animate-pulse w-64 mx-auto mb-4" />
-        <div className="h-6 bg-gray-200 rounded animate-pulse w-96 mx-auto mb-4" />
-        <div className="h-6 bg-gray-200 rounded animate-pulse w-32 mx-auto" />
+    <div className="w-[93%] max-w-[95rem] mx-auto lg:w-full space-y-4 sm:space-y-6">
+      {/* Header Skeleton - FIXED */}
+      <div className="p-4 sm:p-6 text-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-200 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse" />
+        <div className="h-6 sm:h-8 bg-gray-200 rounded animate-pulse w-48 sm:w-64 mx-auto mb-3 sm:mb-4 max-w-full" />
+        <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse w-full sm:w-96 mx-auto mb-3 sm:mb-4 max-w-full px-4" />
+        <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse w-24 sm:w-32 mx-auto" />
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column Skeleton */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Left Column Skeleton - FIXED */}
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {Array.from({ length: 2 }).map((_, i) => (
             <Card key={i}>
-              <div className="p-6">
-                <div className="h-6 bg-gray-200 rounded animate-pulse w-48 mb-4" />
-                <div className="space-y-4">
+              <div className="p-4 sm:p-6">
+                <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse w-36 sm:w-48 mb-3 sm:mb-4" />
+                <div className="space-y-3 sm:space-y-4">
                   {Array.from({ length: 2 }).map((_, j) => (
-                    <div key={j} className="flex gap-4">
-                      <div className="w-16 h-16 bg-gray-200 rounded animate-pulse" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+                    <div key={j} className="flex gap-3 sm:gap-4">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-200 rounded animate-pulse flex-shrink-0" />
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-full sm:w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3 sm:w-1/2" />
                       </div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-16 sm:w-20 flex-shrink-0" />
                     </div>
                   ))}
                 </div>
@@ -46,15 +46,15 @@ function OrderDetailSkeleton() {
           ))}
         </div>
         
-        {/* Right Column Skeleton */}
-        <div className="space-y-6">
+        {/* Right Column Skeleton - FIXED */}
+        <div className="space-y-4 sm:space-y-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
-              <div className="p-4">
-                <div className="h-5 bg-gray-200 rounded animate-pulse w-32 mb-3" />
+              <div className="p-3 sm:p-4">
+                <div className="h-4 sm:h-5 bg-gray-200 rounded animate-pulse w-24 sm:w-32 mb-2 sm:mb-3" />
                 <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-full" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse w-full" />
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse w-2/3" />
                 </div>
               </div>
             </Card>
@@ -65,25 +65,25 @@ function OrderDetailSkeleton() {
   );
 }
 
-// Order not found component
+// Order not found component - FIXED
 function OrderNotFound() {
   return (
-    <div className="max-w-2xl mx-auto text-center py-16">
-      <div className="mx-auto w-24 h-24 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mb-6">
-        <Package className="w-12 h-12 text-red-500" />
+    <div className="max-w-2xl mx-auto text-center py-12 sm:py-16 px-4">
+      <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+        <Package className="w-10 h-10 sm:w-12 sm:h-12 text-red-500" />
       </div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">Order Not Found</h2>
-      <p className="text-gray-600 mb-8 max-w-md mx-auto">
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Order Not Found</h2>
+      <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto px-4">
         We couldn&apos;t find the order you&apos;re looking for. It may have been deleted or you may not have permission to view it.
       </p>
-      <div className="flex gap-4 justify-center">
-        <Button asChild size="lg">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+        <Button asChild size="lg" className="w-full sm:w-auto">
           <Link href="/profile/orders">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Orders
           </Link>
         </Button>
-        <Button variant="outline" asChild size="lg">
+        <Button variant="outline" asChild size="lg" className="w-full sm:w-auto">
           <Link href="/products">
             Continue Shopping
           </Link>
@@ -93,24 +93,24 @@ function OrderNotFound() {
   );
 }
 
-// Error display component
+// Error display component - FIXED
 function OrderError({ message }: { message: string }) {
   return (
-    <div className="max-w-2xl mx-auto text-center py-16">
+    <div className="max-w-2xl mx-auto text-center py-12 sm:py-16 px-4">
       <Card>
         <CardContent>
-          <div className="text-center py-8">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Order</h3>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <div className="flex gap-4 justify-center">
-              <Button asChild>
+          <div className="text-center py-6 sm:py-8">
+            <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 text-red-500 mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Error Loading Order</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 px-4">{message}</p>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Button asChild className="w-full sm:w-auto">
                 <Link href="/profile/orders">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Orders
                 </Link>
               </Button>
-              <Button variant="outline" onClick={() => window.location.reload()}>
+              <Button variant="outline" onClick={() => window.location.reload()} className="w-full sm:w-auto">
                 Try Again
               </Button>
             </div>
@@ -160,30 +160,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <nav className="mb-8 text-sm text-gray-600">
-        <Link href="/" className="hover:text-gray-900 transition-colors">
-          Home
-        </Link>
-        <span className="mx-2">•</span>
-        <Link href="/profile" className="hover:text-gray-900 transition-colors">
-          Profile
-        </Link>
-        <span className="mx-2">•</span>
-        <Link href="/profile/orders" className="hover:text-gray-900 transition-colors">
-          Orders
-        </Link>
-        <span className="mx-2">•</span>
-        <span className="text-gray-900">Order Details</span>
-      </nav>
-
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button variant="ghost" asChild>
+    <main className="w-[93%] max-w-[95rem] mx-auto lg:w-full">
+      {/* Back Button - FIXED */}
+      <div className="mb-4 sm:mb-6">
+        <Button variant="ghost" asChild size="sm" className="sm:size-default -ml-2 sm:ml-0">
           <Link href="/profile/orders">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Orders
+            <span className="text-sm sm:text-base">Back to Orders</span>
           </Link>
         </Button>
       </div>

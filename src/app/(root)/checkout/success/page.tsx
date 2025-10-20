@@ -21,7 +21,7 @@ function OrderConfirmationSkeleton() {
         <div className="h-8 bg-gray-200 rounded animate-pulse w-64 mx-auto mb-2" />
         <div className="h-4 bg-gray-200 rounded animate-pulse w-96 mx-auto" />
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           {Array.from({ length: 2 }).map((_, i) => (
@@ -37,7 +37,7 @@ function OrderConfirmationSkeleton() {
             </Card>
           ))}
         </div>
-        
+
         <div className="space-y-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
@@ -143,7 +143,7 @@ async function OrderConfirmationContent({ orderId }: { orderId: string }) {
 
   // Get order details
   const orderResult = await getOrder(orderId);
-  
+
   if (!orderResult.success) {
     if (orderResult.error?.includes('not found')) {
       return <OrderNotFound />;
@@ -151,7 +151,7 @@ async function OrderConfirmationContent({ orderId }: { orderId: string }) {
     if (orderResult.error?.includes('Authentication')) {
       return <AccessDenied />;
     }
-    
+
     return <OrderError message={orderResult.error || 'Failed to load order details. Please try again.'} />;
   }
 
@@ -169,7 +169,7 @@ export default async function CheckoutSuccessPage({
 
   if (!orderId) {
     return (
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <main className="custom_container py-8">
         <div className="max-w-2xl mx-auto text-center py-16">
           <div className="mx-auto w-24 h-24 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full flex items-center justify-center mb-6">
             <ShoppingBag className="w-12 h-12 text-pink-400" />
@@ -196,11 +196,13 @@ export default async function CheckoutSuccessPage({
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <main className="custom_container py-8">
       {/* Order Confirmation Content */}
-      <Suspense fallback={<OrderConfirmationSkeleton />}>
-        <OrderConfirmationContent orderId={orderId} />
-      </Suspense>
+      <div className='max-w-7xl mx-auto'>
+        <Suspense fallback={<OrderConfirmationSkeleton />}>
+          <OrderConfirmationContent orderId={orderId} />
+        </Suspense>
+      </div>
     </main>
   );
 }

@@ -1,4 +1,4 @@
-// src/components/products/product-detail/reviews-list.tsx
+// src/components/products/product-detail/reviews-list.tsx - DEBUG VERSION
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -62,7 +62,7 @@ export function ReviewsList({
   
   const deletePromiseRef = useRef<Promise<void> | null>(null);
 
-  // ✅ Sync local state with server updates (from router.refresh())
+  // Sync local state with server updates (from router.refresh())
   useEffect(() => {
     setReviews(initialReviews);
   }, [initialReviews]);
@@ -72,9 +72,10 @@ export function ReviewsList({
 
     try {
       const nextPage = currentPage + 1;
+      
       const result = await getProductReviews(productId, {
         page: nextPage,
-        limit: 5,
+        limit: 1, // Match your test limit
         sortBy: 'recent',
       });
 
@@ -102,7 +103,6 @@ export function ReviewsList({
     setIsEditDialogOpen(true);
   };
 
-  // ✅ Optimistic update - update review in state immediately
   const handleEditSuccess = (updatedReview: {
     id: string;
     rating: number;
@@ -110,7 +110,6 @@ export function ReviewsList({
   }) => {
     setIsEditDialogOpen(false);
     
-    // Update the review in the local state
     setReviews((prev) =>
       prev.map((review) =>
         review.id === updatedReview.id
@@ -125,8 +124,6 @@ export function ReviewsList({
     
     setEditingReview(null);
     toast.success('Review updated successfully!');
-
-    // Revalidate server data in background (updates header stats)
     router.refresh();
   };
 
@@ -146,9 +143,7 @@ export function ReviewsList({
 
         if (result.success) {
           toast.success('Review deleted successfully');
-          // Remove the review from the list immediately
           setReviews((prev) => prev.filter((review) => review.id !== deletingReviewId));
-          // Revalidate in background
           router.refresh();
         } else {
           toast.error(result.error || 'Failed to delete review');
@@ -167,7 +162,6 @@ export function ReviewsList({
   };
 
   const handleDeleteDialogOpenChange = (open: boolean) => {
-    // Prevent closing while deleting
     if (!open && isDeleting) {
       return;
     }
@@ -191,6 +185,7 @@ export function ReviewsList({
       .slice(0, 2);
   };
 
+
   return (
     <>
       <div className="space-y-4">
@@ -207,11 +202,9 @@ export function ReviewsList({
                     isDeletingThisReview ? 'opacity-50 pointer-events-none' : ''
                   }`}
                 >
-                  <CardContent className="p-4">
-                    {/* Header with User Info and Rating */}
+                  <CardContent>
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div className="flex items-start gap-3 flex-1">
-                        {/* User Avatar */}
                         <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarImage src={review.user.image || undefined} />
                           <AvatarFallback className="bg-gradient-to-br from-pink-100 to-rose-100 text-pink-700">
@@ -219,7 +212,6 @@ export function ReviewsList({
                           </AvatarFallback>
                         </Avatar>
 
-                        {/* User Name, Date, and Badges */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-body-medium font-semibold text-dark-900">
@@ -247,7 +239,6 @@ export function ReviewsList({
                           </p>
                         </div>
 
-                        {/* Star Rating */}
                         <div className="flex items-center gap-1 flex-shrink-0">
                           {[1, 2, 3, 4, 5].map((i) => (
                             <Star
@@ -263,14 +254,12 @@ export function ReviewsList({
                       </div>
                     </div>
 
-                    {/* Review Comment */}
                     {review.comment && (
                       <div className="text-body text-dark-700 whitespace-pre-wrap mb-3">
                         {review.comment}
                       </div>
                     )}
 
-                    {/* Edit/Delete Actions for Own Review */}
                     {isOwnReview && (
                       <div className="flex items-center gap-2 pt-3 border-t">
                         <Button

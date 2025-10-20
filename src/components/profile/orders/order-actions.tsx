@@ -30,7 +30,7 @@ export const OrderActions = ({
     }
 
     return (
-        <div className="flex gap-2 pt-4 border-t flex-wrap">
+        <div className="flex gap-2 flex-wrap">
             {/* Cancel Order */}
             {canCancel && (
                 <Button
@@ -49,7 +49,7 @@ export const OrderActions = ({
             )}
 
             {/* Reorder */}
-            {canReorder && (
+            {/* {canReorder && (
                 <Button
                     variant="outline"
                     size="sm"
@@ -59,7 +59,7 @@ export const OrderActions = ({
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Buy Again
                 </Button>
-            )}
+            )} */}
 
             {/* Contextual Help Text */}
             {order.status === 'pending' && (

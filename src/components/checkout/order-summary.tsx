@@ -61,7 +61,7 @@ export function OrderSummary({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <ShoppingBag className="w-5 h-5" />
           Order Summary
         </CardTitle>

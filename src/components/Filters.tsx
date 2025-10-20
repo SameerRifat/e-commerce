@@ -254,7 +254,7 @@ export default function Filters({ filterOptions }: FiltersProps) {
 
   // Desktop Filters Component
   const DesktopFilters = () => (
-    <aside className="hidden lg:block">
+    <aside className="hidden lg:block w-full">
       <div className="sticky top-20">
         <div className="rounded-lg border bg-card shadow-sm pl-4 pt-4 pb-4">
           <div className="flex items-center justify-between mb-6">

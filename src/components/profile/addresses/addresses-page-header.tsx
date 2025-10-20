@@ -2,19 +2,22 @@
 
 'use client';
 
+import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 
-interface PageHeaderProps {
+interface AddressesPageHeaderProps {
     onAddAddress: () => void;
 }
 
-export const PageHeader = ({ onAddAddress }: PageHeaderProps) => {
+export const AddressesPageHeader = ({ onAddAddress }: AddressesPageHeaderProps) => {
     return (
         <div className="flex flex-col sm:flex-row justify-between gap-4">
             <div>
-                <h2 className="text-2xl font-bold text-foreground">Address Book</h2>
-                <p className="text-muted-foreground">Manage your shipping and billing addresses</p>
+                <PageHeader
+                    title="Address Book"
+                    subtitle="Manage your shipping and billing addresses"
+                />
             </div>
 
             <Button onClick={onAddAddress}>

@@ -6,7 +6,7 @@ export function ProductsSkeleton() {
     return (
         <section className="custom_container">
             <Skeleton className="h-8 w-48 mb-6" />
-            <CardSkeleton count={4} />
+            <CardSkeleton count={10} />
         </section>
     );
 }

@@ -57,7 +57,7 @@ export function AdminUserSection({ user }: AdminUserSectionProps) {
                     className="gap-2"
                     aria-label="Admin user menu"
                 >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-7 w-7">
                         <AvatarImage src={user.image || undefined} alt={user.name} />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(user.name)}

@@ -38,7 +38,7 @@ export const AddressList = ({
             {/* Shipping Addresses */}
             {shippingAddresses.length > 0 && (
                 <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-lg sm:text-xl font-medium mb-4 flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                         Shipping Addresses
                     </h3>
@@ -61,7 +61,7 @@ export const AddressList = ({
             {/* Billing Addresses */}
             {billingAddresses.length > 0 && (
                 <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-lg sm:text-xl font-medium mb-4 flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                         Billing Addresses
                     </h3>

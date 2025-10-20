@@ -3,6 +3,6 @@ import { getAllProducts } from "@/lib/actions/product";
 import LatestProductsSection from "@/components/home/latest-products";
 
 export async function LatestProductsSectionData() {
-    const { products } = await getAllProducts({ limit: 12 });
+    const { products } = await getAllProducts({ limit: 10 });
     return <LatestProductsSection products={products} />;
 }

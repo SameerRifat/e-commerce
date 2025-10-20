@@ -31,7 +31,7 @@ export default function Navbar({ children }: NavbarProps) {
     return (
         <header className="sticky top-0 z-50 bg-background border-b border-border">
             <nav
-                className="custom_container flex h-[60px] sm:h-16 items-center gap-4 lg:gap-6"
+                className="custom_container flex h-[56px] sm:h-16 items-center gap-4 lg:gap-6"
                 aria-label="Primary navigation"
             >
                 {/* Logo - STATIC, renders immediately */}
@@ -66,16 +66,16 @@ export default function Navbar({ children }: NavbarProps) {
                 </div>
 
                 {/* Desktop & Mobile Actions */}
-                <div className="flex items-center gap-3 ml-auto flex-shrink-0">
+                <div className="flex items-center gap-5 ml-auto flex-shrink-0">
                     {/* Mobile Search - STATIC, hidden on desktop */}
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setMobileSearchOpen(true)}
                         aria-label="Search products"
-                        className="md:hidden"
+                        className="md:hidden !p-0 h-fit rounded-full "
                     >
-                        <Search className="h-5 w-5" />
+                        <Search className="!h-6 !w-6" />
                     </Button>
 
                     {/* Cart - visible on all sizes */}
@@ -83,11 +83,11 @@ export default function Navbar({ children }: NavbarProps) {
                         variant="ghost"
                         size="sm"
                         asChild
-                        className="relative gap-2"
+                        className="relative gap-2 p-0 sm:px-2 h-fit sm:h-9 rounded-full sm:rounded-md"
                     >
-                        <Link href="/cart" aria-label={`Cart with ${itemCount} items`}>
+                        <Link href="/cart" aria-label={`Cart with ${itemCount} items`} className="">
                             <div className="relative">
-                                <ShoppingBag className="h-5 w-5" />
+                                <ShoppingBag className="!h-6 !w-6" />
                                 {itemCount > 0 && (
                                     <Badge
                                         className="absolute -top-2 -right-2 h-5 min-w-[1.25rem] px-1 flex items-center justify-center text-[10px] pointer-events-none"
@@ -113,9 +113,9 @@ export default function Navbar({ children }: NavbarProps) {
                                 variant="ghost"
                                 size="sm"
                                 aria-label="Toggle menu"
-                                className="cursor-pointer md:hidden"
+                                className="cursor-pointer md:hidden !p-0 h-fit"
                             >
-                                <Menu className="h-5 w-5" />
+                                <Menu className="!h-6 !w-6" />
                             </Button>
                         }
                     />

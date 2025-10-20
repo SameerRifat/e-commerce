@@ -58,19 +58,19 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     const activeTab = getActiveTab();
 
     return (
-        <div className="min-h-screen mt-20">
+        <div>
             <div className="custom_container py-8">
 
                 {/* Profile Layout with Vertical Tabs */}
-                <div className="flex flex-col lg:flex-row gap-8">
+                <div className="flex flex-col lg:flex-row gap-8 2xl:gap-12">
                     {/* Sidebar Navigation */}
                     <div className="lg:w-80 lg:shrink-0">
                         <div>
-                            <h2 className="text-lg font-semibold mb-6 text-foreground">Account Menu</h2>
+                            <h2 className="text-lg sm:text-xl 2xl:text-2xl font-medium mb-6">Account Menu</h2>
 
                             <Tabs value={activeTab} orientation="vertical" className="w-full">
                                 <TabsList
-                                    className="flex flex-col items-stretch space-y-1 bg-transparent h-auto p-0"
+                                    className="flex flex-col items-stretch space-y-1 bg-transparent h-auto p-0 w-full"
                                 >
                                     {profileTabs.map((tab) => {
                                         const Icon = tab.icon;

@@ -28,6 +28,7 @@ import {
 } from '@/lib/utils/order-helpers';
 import { OrderItemDisplay } from './order-item-display';
 import { OrderActions } from './order-actions';
+import PageHeader from '@/components/shared/page-header';
 
 interface OrdersPageClientProps {
   initialOrders: OrderWithDetails[];
@@ -159,10 +160,10 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">My Orders</h1>
-          <p className="text-muted-foreground">Track and manage your orders</p>
-        </div>
+        <PageHeader
+          title="My Orders"
+          subtitle="Track and manage your orders"
+        />
 
         {/* Empty State */}
         <Card>
@@ -189,12 +190,10 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">My Orders</h1>
-        <p className="text-muted-foreground">
-          Track and manage your {orders.length} order{orders.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+      <PageHeader
+        title="My Orders"
+        subtitle={`Track and manage your ${orders.length} order${orders.length !== 1 ? 's' : ''}`}
+      />
 
       {/* Orders List */}
       <div className="space-y-4">
@@ -290,8 +289,8 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {order.items.slice(0, 2).map((item) => (
-                      <OrderItemDisplay 
-                        key={item.id} 
+                      <OrderItemDisplay
+                        key={item.id}
                         item={item}
                         showFullDetails={false}
                         orderStatus={order.status} // ✅ PASS ORDER STATUS

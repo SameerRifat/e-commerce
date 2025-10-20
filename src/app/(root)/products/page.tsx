@@ -28,8 +28,8 @@ export default async function ProductsPage({
 
   return (
     <main className="custom_container pb-10">
-      <header className="flex items-center justify-between py-6">
-        <h1 className="text-heading-3 text-foreground">
+      <header className="hidden sm:flex items-center justify-between gap-x-5 gap-y-4 flex-wrap py-6">
+        <h1 className="text-lg font-medium">
           Products
         </h1>
         <Sort />
@@ -37,8 +37,13 @@ export default async function ProductsPage({
 
       <FilterBadges />
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
-        <Filters filterOptions={filterOptions} />
+      <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-[250px_1fr] xl:grid-cols-[260px_1fr] 2xl:grid-cols-[270px_1fr]">
+        <div className="flex items-start justify-between gap-4 flex-wrap pt-6 sm:pt-0 ">
+          <div className="flex sm:hidden">
+            <Sort />
+          </div>
+          <Filters filterOptions={filterOptions} />
+        </div>
 
         {/* Pass to client component for load more functionality */}
         <ProductGridClient

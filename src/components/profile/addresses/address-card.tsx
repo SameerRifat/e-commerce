@@ -62,20 +62,21 @@ export const AddressCard = ({
     const TypeIcon = getAddressTypeIcon(address.type);
 
     return (
-        <Card className={`relative transition-all hover:shadow-md ${
-            address.isDefault ? 'ring-2 ring-primary shadow-sm' : ''
-        } ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
-            <CardHeader className="pb-4">
+        <Card className={`relative transition-all hover:shadow-md ${address.isDefault ? 'ring-2 ring-primary shadow-sm' : ''
+            } ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
+            <CardHeader>
                 <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getAddressTypeColor(address.type)}`}>
+                    <div className="flex gap-3">
+                        <div className={`p-2 rounded-lg w-fit h-fit mt-1 ${getAddressTypeColor(address.type)}`}>
                             <TypeIcon className="w-4 h-4" />
                         </div>
                         <div>
                             <CardTitle className="flex items-center gap-2">
-                                {getAddressTypeLabel(address.type)}
+                                <span className='shrink-0'>
+                                    {getAddressTypeLabel(address.type)}
+                                </span>
                                 {address.isDefault && (
-                                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                                    <Badge variant="secondary" className="bg-primary/10 text-primary text-xs sm:text-sm">
                                         <Star className="w-3 h-3 mr-1" />
                                         Default
                                     </Badge>
@@ -95,9 +96,9 @@ export const AddressCard = ({
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 className="h-8 w-8 p-0"
                                 disabled={isLoading}
                             >
@@ -109,7 +110,7 @@ export const AddressCard = ({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                                 onClick={() => onEdit(address)}
                                 disabled={isLoading}
                             >
@@ -117,7 +118,7 @@ export const AddressCard = ({
                                 Edit Address
                             </DropdownMenuItem>
                             {!address.isDefault && (
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                     onClick={() => onSetDefault(address.id)}
                                     disabled={isLoading}
                                 >
@@ -161,11 +162,11 @@ export const AddressCard = ({
                 <div className="flex items-start gap-2">
                     <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                     <div className="text-sm">
-                        <p className="font-medium">{address.line1}</p>
+                        <p className="text-xs sm:text-sm md:text-base font-medium">{address.line1}</p>
                         {address.line2 && (
                             <p className="text-muted-foreground">{address.line2}</p>
                         )}
-                        <p>
+                        <p className='text-xs sm:text-sm md:text-base'>
                             {address.city}, {address.state} {address.postalCode}
                         </p>
                         <p className="text-muted-foreground">{address.country}</p>
@@ -176,7 +177,7 @@ export const AddressCard = ({
                 {address.phone && (
                     <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4 text-muted-foreground" />
-                        <p className="text-sm">{address.phone}</p>
+                        <p className="text-xs sm:text-sm md:text-base">{address.phone}</p>
                     </div>
                 )}
 

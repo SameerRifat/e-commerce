@@ -100,26 +100,26 @@ export default function SecuritySettingsSection({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
+      <CardHeader className='px-4 sm:px-6'>
+        <div className="flex gap-2">
+          <Shield className="h-5 w-5 min-w-5 min-h-5 text-primary" />
           <div>
             <CardTitle>Security</CardTitle>
-            <CardDescription>Manage your password and security settings</CardDescription>
+            <CardDescription className='mt-2 text-xs sm:text-sm'>Manage your password and security settings</CardDescription>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-4 sm:px-6">
         {!isChangingPassword ? (
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center justify-between flex-wrap gap-5 p-4 border rounded-lg bg-muted/30">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <KeyRound className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="font-medium">Password</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Last updated {new Date(user.updatedAt).toLocaleDateString()}
                 </p>
               </div>
