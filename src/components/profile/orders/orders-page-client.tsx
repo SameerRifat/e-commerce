@@ -243,7 +243,7 @@ export const OrdersPageClient = ({ initialOrders }: OrdersPageClientProps) => {
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-4 pt-6">
+              <CardContent className="space-y-4">
                 {/* Status Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
                   <div>

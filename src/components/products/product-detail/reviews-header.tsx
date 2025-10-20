@@ -20,11 +20,11 @@ export function ReviewsHeader({ stats }: ReviewsHeaderProps) {
 
     return (
         <Card className="bg-gradient-to-br from-gray-50 to-gray-100/50">
-            <CardContent className="p-6">
+            <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Average Rating */}
                     <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-5xl font-bold text-gray-900 mb-2">
+                        <div className="text-4xl 2xl:text-5xl font-bold mb-2">
                             {averageRating.toFixed(1)}
                         </div>
                         <div className="flex items-center gap-1 mb-2">

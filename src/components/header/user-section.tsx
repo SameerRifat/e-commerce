@@ -52,12 +52,12 @@ export function UserSection({ user }: UserSectionProps) {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 !p-0 sm:!px-2.5 rounded-full sm:rounded-md h-fit sm:h-9"
+                    variant="secondary"
+                    // size="sm"
+                    className="gap-2 !p-0 lg:!px-4 lg:!py-2"
                     aria-label="User menu"
                 >
-                    <Avatar className="!w-6 !h-6 sm:!h-7 sm:!w-7">
+                    <Avatar>
                         <AvatarImage src={user.image || undefined} alt={user.name} className="object-cover"/>
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(user.name)}

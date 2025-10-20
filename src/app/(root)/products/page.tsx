@@ -37,7 +37,7 @@ export default async function ProductsPage({
 
       <FilterBadges />
 
-      <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-[250px_1fr] xl:grid-cols-[260px_1fr] 2xl:grid-cols-[270px_1fr]">
+      <section className="grid grid-cols-1 gap-2 sm:gap-4 md:gap-6 lg:grid-cols-[250px_1fr] xl:grid-cols-[260px_1fr] 2xl:grid-cols-[270px_1fr]">
         <div className="flex items-start justify-between gap-4 flex-wrap pt-6 sm:pt-0 ">
           <div className="flex sm:hidden">
             <Sort />

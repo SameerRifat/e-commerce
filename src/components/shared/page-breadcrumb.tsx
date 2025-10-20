@@ -1,6 +1,7 @@
 // src/components/shared/page-breadcrumb.tsx
 
 import { Breadcrumb, BreadcrumbSeparator, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbItem } from "@/components/ui/breadcrumb";
+import { cn } from "@/lib/utils";
 
 export interface BreadcrumbItem {
     label: string;
@@ -14,7 +15,7 @@ interface PageBreadcrumbProps {
 
 export function PageBreadcrumb({ items, className }: PageBreadcrumbProps) {
     return (
-        <Breadcrumb className={className}>
+        <Breadcrumb className={cn("mb-2", className)}>
             <BreadcrumbList>
                 {items.map((item, index) => {
                     const isLast = index === items.length - 1;

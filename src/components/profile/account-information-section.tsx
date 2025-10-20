@@ -112,7 +112,7 @@ export default function AccountInformationSection({
   return (
     <Card>
       <CardHeader className='px-4 sm:px-6'>
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between">
           <div>
             <CardTitle>Account Information</CardTitle>
             <CardDescription className='mt-2 text-xs sm:text-sm'>
@@ -125,6 +125,7 @@ export default function AccountInformationSection({
               size="sm"
               onClick={() => setIsEditing(true)}
               disabled={isLoading}
+              className='text-xs sm:text-sm'
             >
               Edit
             </Button>

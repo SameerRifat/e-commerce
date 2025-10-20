@@ -13,7 +13,7 @@ import { OrderDetailClient } from '@/components/profile/orders/order-detail-clie
 // Loading component for order detail - FIXED FOR MOBILE
 function OrderDetailSkeleton() {
   return (
-    <div className="w-[93%] max-w-[95rem] mx-auto lg:w-full space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header Skeleton - FIXED */}
       <div className="p-4 sm:p-6 text-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
         <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-200 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse" />
@@ -160,7 +160,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   }
 
   return (
-    <main className="w-[93%] max-w-[95rem] mx-auto lg:w-full">
+    <main>
       {/* Back Button - FIXED */}
       <div className="mb-4 sm:mb-6">
         <Button variant="ghost" asChild size="sm" className="sm:size-default -ml-2 sm:ml-0">
@@ -172,6 +172,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       </div>
 
       {/* Order Detail Content */}
+      {/* <OrderDetailSkeleton /> */}
       <Suspense fallback={<OrderDetailSkeleton />}>
         <OrderDetailContent orderId={orderId} />
       </Suspense>

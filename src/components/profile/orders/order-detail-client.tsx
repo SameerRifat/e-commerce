@@ -131,7 +131,7 @@ export const OrderDetailClient = ({ order: initialOrder }: OrderDetailClientProp
         <div className="space-y-4 sm:space-y-6">
             {/* Success Header - COMPLETELY REDESIGNED FOR MOBILE */}
             <Card className="border-l-4 border-l-primary overflow-hidden">
-                <CardContent className="py-4 sm:py-6">
+                <CardContent className="sm:py-6">
                     <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                         {/* Left section with icon and details */}
                         <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">

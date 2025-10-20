@@ -66,37 +66,39 @@ export default function Navbar({ children }: NavbarProps) {
                 </div>
 
                 {/* Desktop & Mobile Actions */}
-                <div className="flex items-center gap-5 ml-auto flex-shrink-0">
+                <div className="flex items-center gap-4 xl:gap-5 2xl:gap-6 ml-auto flex-shrink-0">
                     {/* Mobile Search - STATIC, hidden on desktop */}
                     <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="secondary"
+                        size="icon"
                         onClick={() => setMobileSearchOpen(true)}
                         aria-label="Search products"
-                        className="md:hidden !p-0 h-fit rounded-full "
+                        // className="md:hidden !p-0 h-fit rounded-full "
+                        className="rounded-full sm:rounded-md md:hidden"
                     >
-                        <Search className="!h-6 !w-6" />
+                        <Search />
                     </Button>
 
                     {/* Cart - visible on all sizes */}
                     <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="secondary"
+                        size="icon"
                         asChild
-                        className="relative gap-2 p-0 sm:px-2 h-fit sm:h-9 rounded-full sm:rounded-md"
+                        // className="relative gap-2 p-0 sm:px-2 h-fit sm:h-9 rounded-full sm:rounded-md"
+                        className="!rounded-full sm:!rounded-md"
                     >
                         <Link href="/cart" aria-label={`Cart with ${itemCount} items`} className="">
                             <div className="relative">
-                                <ShoppingBag className="!h-6 !w-6" />
+                                <ShoppingBag />
                                 {itemCount > 0 && (
                                     <Badge
-                                        className="absolute -top-2 -right-2 h-5 min-w-[1.25rem] px-1 flex items-center justify-center text-[10px] pointer-events-none"
+                                        className="absolute -top-3 -right-3 w-4 h-4 sm:w-5 sm:h-5 px-1 flex items-center justify-center text-[10px] pointer-events-none"
                                     >
                                         {itemCount > 99 ? "99+" : itemCount}
                                     </Badge>
                                 )}
                             </div>
-                            <span className="hidden lg:inline">Cart</span>
+                            {/* <span className="hidden lg:inline">Cart</span> */}
                         </Link>
                     </Button>
 
@@ -110,12 +112,13 @@ export default function Navbar({ children }: NavbarProps) {
                         onOpenChange={setMobileMenuOpen}
                         trigger={
                             <Button
-                                variant="ghost"
-                                size="sm"
+                                variant="secondary"
+                                size="icon"
                                 aria-label="Toggle menu"
-                                className="cursor-pointer md:hidden !p-0 h-fit"
+                                // className="cursor-pointer md:hidden !p-0 h-fit"
+                                className="rounded-full sm:rounded-md md:hidden"
                             >
-                                <Menu className="!h-6 !w-6" />
+                                <Menu />
                             </Button>
                         }
                     />

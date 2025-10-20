@@ -253,9 +253,9 @@ export function CartPageClient({ initialItems, initialTotal, user }: CartPageCli
                       {item.pendingOperation === 'remove' ? (
                         <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin mr-1.5 sm:mr-2" />
                       ) : (
-                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       )}
-                      Remove
+                      <span className="hidden sm:flex ml-1.5 sm:ml-2">Remove</span>
                     </Button>
                   </div>
                 </div>

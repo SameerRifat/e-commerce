@@ -228,13 +228,13 @@ export function ReviewsList({
                             {isOwnReview && (
                               <Badge
                                 variant="outline"
-                                className="text-xs border-primary text-primary"
+                                className="text-xs border-primary text-primary hidden sm:flex"
                               >
                                 Your Review
                               </Badge>
                             )}
                           </div>
-                          <p className="text-caption text-gray-500 mt-0.5">
+                          <p className="text-caption text-muted-foreground mt-1">
                             {formatDate(review.createdAt)}
                           </p>
                         </div>
@@ -266,10 +266,10 @@ export function ReviewsList({
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditClick(review)}
-                          className="gap-2"
+                          className="gap-2 text-xs sm:text-sm"
                           disabled={isDeleting}
                         >
-                          <Edit className="w-3.5 h-3.5" />
+                          <Edit className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                           Edit Review
                         </Button>
                         <Button
@@ -298,8 +298,7 @@ export function ReviewsList({
               variant="outline"
               onClick={handleLoadMore}
               disabled={isLoadingMore}
-              size="lg"
-              className="gap-2"
+              className="gap-2 text-xs sm:text-sm"
             >
               {isLoadingMore ? (
                 <>

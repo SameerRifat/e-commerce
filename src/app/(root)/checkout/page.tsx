@@ -95,7 +95,7 @@ async function CheckoutContent() {
 
 export default async function CheckoutPage() {
   return (
-    <main className="custom_container py-8">
+    <main className="custom_container py-6 sm:py-8">
       {/* Breadcrumb - Using Shadcn component */}
       <div className='max-w-7xl mx-auto'>
         <PageBreadcrumb
@@ -104,7 +104,6 @@ export default async function CheckoutPage() {
             { label: "Cart", href: "/cart" },
             { label: "Checkout" },
           ]}
-          className="mb-8"
         />
 
         {/* Page Header */}

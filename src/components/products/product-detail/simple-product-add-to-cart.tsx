@@ -155,12 +155,12 @@ export default function SimpleProductAddToCart({
       {/* Price Display with Shadcn Badge */}
       {selectedProduct && (
         <div className="flex items-center gap-3">
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-2xl sm:text-3xl font-semibold sm:font-bold">
             {formatPrice(displayPrice!)}
           </p>
           {compareAtPrice && (
             <>
-              <span className="text-xl text-gray-500 line-through">
+              <span className="sm:text-xl text-muted-foreground line-through">
                 {formatPrice(compareAtPrice)}
               </span>
               {discount && (

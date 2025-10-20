@@ -235,11 +235,11 @@ export function CheckoutForm({
           {/* Order Notes */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle>
                 Order Notes (Optional)
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <Label htmlFor="notes">
                 Special instructions for your order
               </Label>
@@ -251,7 +251,7 @@ export function CheckoutForm({
                 disabled={isFormDisabled}
                 rows={3}
                 maxLength={500}
-                className="resize-none"
+                className="resize-none placeholder:text-xs sm:text-sm"
               />
               {notes.length > 0 && (
                 <p className="text-xs text-gray-500">
@@ -266,7 +266,7 @@ export function CheckoutForm({
 
           {/* Terms and Conditions */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-gray-600">
@@ -302,8 +302,8 @@ export function CheckoutForm({
             />
 
             {/* Place Order Button */}
-            <Card>
-              <CardContent className="pt-6">
+            {/* <Card>
+              <CardContent> */}
                 <Button
                   type="submit"
                   size="lg"
@@ -326,11 +326,11 @@ export function CheckoutForm({
                   )}
                 </Button>
                 
-                <p className="text-xs text-gray-500 text-center mt-3">
+                <p className="text-xs text-gray-500 text-center">
                   Secure checkout · Your payment info is encrypted
                 </p>
-              </CardContent>
-            </Card>
+              {/* </CardContent>
+            </Card> */}
           </div>
         </div>
       </div>

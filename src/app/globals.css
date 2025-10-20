@@ -125,7 +125,7 @@
   }
 
   .custom_container {
-    @apply w-[93%] max-w-[95rem] mx-auto
+    @apply w-[92%] max-w-[95rem] mx-auto
   }
 }
 

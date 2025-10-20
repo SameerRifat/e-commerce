@@ -65,7 +65,7 @@ export function PaymentMethods({
   return (
     <Card className={error ? 'border-red-300' : ''}>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Payment Method</CardTitle>
+        <CardTitle>Payment Method</CardTitle>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
       </CardHeader>
       <CardContent className="space-y-6">
@@ -84,7 +84,7 @@ export function PaymentMethods({
               <Label
                 key={method}
                 htmlFor={method}
-                className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                className={`flex items-start space-x-2 sm:space-x-3 px-3 py-4 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                   isSelected 
                     ? 'ring-1 ring-primary bg-primary/5 border-primary'
                     : 'hover:border-gray-300'
@@ -94,24 +94,25 @@ export function PaymentMethods({
                   value={method} 
                   id={method}
                   disabled={!isAvailable || disabled}
+                  className='mt-0.5'
                 />
                 
                 <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Icon className="w-5 h-5 text-gray-600" />
+                  <div className="flex items-center justify-between gap-x-3 gap-y-4 flex-wrap">
+                    <div className="flex space-x-3">
+                      <Icon className="w-5 h-5 mt-0.5" />
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium">
                           {details.name}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs sm:text-sm text-muted-foreground mt-2">
                           {details.description}
                         </div>
                       </div>
                     </div>
                     
                     {!isAvailable && (
-                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-[10px] py-1 sm:text-sm">
                         Coming Soon
                       </Badge>
                     )}

@@ -170,8 +170,8 @@ export function AddressSelector({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Home className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2">
+                <Home className="w-4 h-4 min-w-4 min-h-4 sm:w-5 sm:h-5" />
                 Shipping Address
               </CardTitle>
               {isRefreshing && (
@@ -185,8 +185,8 @@ export function AddressSelector({
               disabled={isDisabled}
               type="button"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New
+              <Plus className="w-4 h-4" />
+              <span className='hidden sm:flex ml-2'>Add New</span>
             </Button>
           </div>
           {errors.shippingAddressId && (
@@ -195,9 +195,9 @@ export function AddressSelector({
         </CardHeader>
         <CardContent>
           {shippingAddresses.length === 0 ? (
-            <div className="text-center py-8">
+            <div className="text-center">
               <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No shipping addresses found</p>
+              <p className="text-muted-foreground text-sm sm:text-base mb-4">No shipping addresses found</p>
               <Button 
                 onClick={() => handleAddAddress('shipping')} 
                 disabled={isDisabled}
@@ -218,7 +218,7 @@ export function AddressSelector({
                 <Label
                   key={address.id}
                   htmlFor={`shipping-${address.id}`}
-                  className={`flex items-start space-x-3 p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  className={`flex items-start space-x-1 sm:space-x-3 p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                     selectedShippingAddressId === address.id
                       ? 'ring-1 ring-primary bg-primary/5 border-primary'
                       : 'hover:border-gray-300'
@@ -233,7 +233,7 @@ export function AddressSelector({
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-medium">
                             {address.fullName}
                           </span>
                           {address.isDefault && (
@@ -242,11 +242,11 @@ export function AddressSelector({
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-700 mb-2">
+                        <p className="text-sm mb-2">
                           {formatAddress(address)}
                         </p>
                         {address.phone && (
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             Phone: {address.phone}
                           </p>
                         )}
@@ -260,7 +260,7 @@ export function AddressSelector({
                           handleEditAddress(address);
                         }}
                         disabled={isDisabled}
-                        className="text-gray-500 hover:text-gray-700 ml-2"
+                        className="text-gray-500 hover ml-2"
                         type="button"
                       >
                         <Edit className="w-4 h-4" />
@@ -276,7 +276,7 @@ export function AddressSelector({
 
       {/* Use Same Address Checkbox */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-center space-x-2">
             <Checkbox
               id="useSameAddress"
@@ -303,8 +303,8 @@ export function AddressSelector({
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <Building className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="w-4 h-4 min-w-4 min-h-4 sm:w-5 sm:h-5" />
                   Billing Address
                 </CardTitle>
                 {isRefreshing && (
@@ -318,8 +318,8 @@ export function AddressSelector({
                 disabled={isDisabled}
                 type="button"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add New
+                <Plus className="w-4 h-4" />
+                <span className='hidden sm:flex ml-2'>Add New</span>
               </Button>
             </div>
             {errors.billingAddressId && (
@@ -328,9 +328,9 @@ export function AddressSelector({
           </CardHeader>
           <CardContent>
             {billingAddresses.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center">
                 <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">No billing addresses found</p>
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">No billing addresses found</p>
                 <Button 
                   onClick={() => handleAddAddress('billing')} 
                   disabled={isDisabled}
@@ -351,7 +351,7 @@ export function AddressSelector({
                   <Label
                     key={address.id}
                     htmlFor={`billing-${address.id}`}
-                    className={`flex items-start space-x-3 p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                    className={`flex items-start space-x-1 sm:space-x-3 p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                       selectedBillingAddressId === address.id
                         ? 'ring-2 ring-primary bg-primary/5 border-primary'
                         : 'hover:border-gray-300'
@@ -366,7 +366,7 @@ export function AddressSelector({
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-medium text-gray-900">
+                            <span className="text-sm font-medium">
                               {address.fullName}
                             </span>
                             {address.isDefault && (
@@ -375,11 +375,11 @@ export function AddressSelector({
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-700 mb-2">
+                          <p className="text-sm mb-2">
                             {formatAddress(address)}
                           </p>
                           {address.phone && (
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                               Phone: {address.phone}
                             </p>
                           )}
@@ -393,7 +393,7 @@ export function AddressSelector({
                             handleEditAddress(address);
                           }}
                           disabled={isDisabled}
-                          className="text-gray-500 hover:text-gray-700 ml-2"
+                          className="text-gray-500 hover ml-2"
                           type="button"
                         >
                           <Edit className="w-4 h-4" />

@@ -59,8 +59,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
 
     return (
         <div>
-            <div className="custom_container py-8">
-
+            <div className="custom_container pt-6 pb-8 sm:py-8">
                 {/* Profile Layout with Vertical Tabs */}
                 <div className="flex flex-col lg:flex-row gap-8 2xl:gap-12">
                     {/* Sidebar Navigation */}
@@ -102,7 +101,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
                         </div>
 
                         {/* Help Section */}
-                        <div className="mt-8">
+                        <div className="mt-6 sm:mt-8">
                             <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <Headphones className="w-4 h-4 text-orange-600" />

@@ -150,12 +150,12 @@ export default function ConfigurableProductAddToCart({
       {/* Price Display with Shadcn Badge */}
       {selectedVariant && (
         <div className="flex items-center gap-3">
-          <p className="text-2xl sm:text-3xl font-bold">
+          <p className="text-2xl sm:text-3xl font-semibold sm:font-bold">
             {formatPrice(displayPrice!)}
           </p>
           {compareAtPrice && (
             <>
-              <span className="text-lg sm:text-xl text-gray-500 line-through">
+              <span className="sm:text-xl text-muted-foreground line-through">
                 {formatPrice(compareAtPrice)}
               </span>
               {discount && (
@@ -184,7 +184,7 @@ export default function ConfigurableProductAddToCart({
                   variant="ghost"
                   size="icon"
                   onClick={() => variantSelection.setSelectedColor(color.id)}
-                  className={`relative w-12 h-12 rounded-full border-2 p-0 ${isSelected
+                  className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 p-0 ${isSelected
                     ? 'border-gray-800 shadow-md'
                     : 'border-gray-300 hover:border-gray-400'
                     }`}
@@ -221,7 +221,7 @@ export default function ConfigurableProductAddToCart({
                   key={size.id}
                   variant={isSelected ? "default" : "outline"}
                   onClick={() => variantSelection.setSelectedSize(size.id)}
-                  className="text-sm font-medium"
+                  className="text-sm sm:font-medium h-8 sm:h-9"
                 >
                   {size.name}
                 </Button>

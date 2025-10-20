@@ -96,7 +96,7 @@ export default async function ProductDetailPage({ params }: Props) {
             {/* Breadcrumb */}
             <ProductBreadcrumb productName={product.name} />
 
-            <section className="grid grid-cols-1 gap-10 2xl:gap-14 lg:grid-cols-2 2xl:grid-cols-[1fr_650px]">
+            <section className="grid grid-cols-1 gap-8 sm:gap-10 2xl:gap-14 lg:grid-cols-2 2xl:grid-cols-[1fr_650px]">
                 {isConfigurable ? (
                     <VariantSelectionProvider
                         productId={product.id}
@@ -213,20 +213,12 @@ export default async function ProductDetailPage({ params }: Props) {
                                         </Link>
                                     )}
                                     {product.gender && (
-                                        <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                                        <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded-full">
                                             {product.gender.label}
                                         </span>
                                     )}
                                 </div>
 
-                                {/* Optional: Subtitle for context */}
-                                {(product.gender?.label || product.category?.name) && (
-                                    <p className="text-sm text-gray-500">
-                                        {product.gender?.label && product.category?.name
-                                            ? `${product.gender.label} ${product.category.name}`
-                                            : product.gender?.label || product.category?.name}
-                                    </p>
-                                )}
                             </header>
 
                             <SimpleProductAddToCart

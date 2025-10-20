@@ -22,10 +22,10 @@ function getUserInitials(name: string): string {
 
 export default function ProfileHeader({ user }: ProfileHeaderProps) {
   return (
-    <div className="flex flex-wrap sm:items-start gap-6">
+    <div className="flex flex-wrap sm:items-start gap-4 sm:gap-6">
       {/* Avatar Section */}
       <div className="relative group w-fit h-fit">
-        <Avatar className="h-24 w-24 2xl:w-28 2xl:h-28 border-4 border-background shadow-lg">
+        <Avatar className="w-20 h-20 min-w-20 min-h-20 sm:h-24 sm:w-24 2xl:w-28 2xl:h-28 border-4 border-background shadow-lg">
           {user.image && (
             <AvatarImage
               src={user.image}
@@ -64,11 +64,15 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
             </div>
           )}
 
-          <div className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
             Member since {formatDate(user.createdAt)}
           </div>
         </div>
+      </div>
+      <div className="inline-flex sm:hidden items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+        Member since {formatDate(user.createdAt)}
       </div>
     </div>
   );

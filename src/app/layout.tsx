@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import NextTopLoader from 'nextjs-toploader';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +24,15 @@ export default function RootShell({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
+      <NextTopLoader
+          // color="#e17100"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+        />
         {children}
         <Toaster position="top-right" richColors />
       </body>

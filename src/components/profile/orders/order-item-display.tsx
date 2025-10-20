@@ -284,7 +284,7 @@ export function OrderItemDisplay({
               </Button>
 
               {hasReview && (
-                <span className="flex items-center gap-1 text-xs text-green-600">
+                <span className="hidden sm:flex items-center gap-1 text-xs text-green-600">
                   <CheckCircle className="w-3 h-3" />
                   Reviewed
                 </span>

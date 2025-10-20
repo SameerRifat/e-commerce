@@ -360,7 +360,7 @@ export default function Filters({ filterOptions }: FiltersProps) {
       <div className="flex items-center justify-between mb-4">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2 text-xs sm:text-sm">
               <Filter className="h-4 w-4" />
               Filters
               {totalActiveFilters > 0 && (
