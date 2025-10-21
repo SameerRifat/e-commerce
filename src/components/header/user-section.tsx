@@ -54,7 +54,7 @@ export function UserSection({ user }: UserSectionProps) {
                 <Button
                     variant="secondary"
                     // size="sm"
-                    className="gap-2 !p-0 lg:!px-4 lg:!py-2 rounded-full lg:rounded-md"
+                    className="gap-2 !p-0 lg:!px-4 lg:!py-2 rounded-full lg:rounded-md h-fit lg:h-9"
                     aria-label="User menu"
                 >
                     <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
