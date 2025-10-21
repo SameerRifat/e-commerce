@@ -54,10 +54,10 @@ export function UserSection({ user }: UserSectionProps) {
                 <Button
                     variant="secondary"
                     // size="sm"
-                    className="gap-2 !p-0 lg:!px-4 lg:!py-2 rounded-full lg:rounded-md h-fit lg:h-9"
+                    className="gap-2 !p-0 lg:!px-4 lg:!py-2 rounded-full lg:rounded-md"
                     aria-label="User menu"
                 >
-                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                    <Avatar>
                         <AvatarImage src={user.image || undefined} alt={user.name} className="object-cover"/>
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(user.name)}
