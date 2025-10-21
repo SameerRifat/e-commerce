@@ -120,7 +120,7 @@ export default async function ProductDetailPage({ params }: Props) {
                                         <Link href={`/products?brand=${product.brand.slug}`}>
                                             <Badge
                                                 variant="secondary"
-                                                className="cursor-pointer"
+                                                className="text-xs sm:text-sm cursor-pointer hover:bg-gray-300 transition-colors font-medium"
                                             >
                                                 {product.brand.name}
                                             </Badge>
@@ -130,14 +130,14 @@ export default async function ProductDetailPage({ params }: Props) {
                                         <Link href={`/products?category=${product.category.slug}`}>
                                             <Badge
                                                 variant="outline"
-                                                className="cursor-pointer"
+                                                className="text-xs sm:text-sm cursor-pointer hover:border-gray-500 transition-colors font-medium"
                                             >
                                                 {product.category.name}
                                             </Badge>
                                         </Link>
                                     )}
                                     {product.gender && (
-                                        <Badge variant='secondary'>
+                                        <Badge variant='secondary' className="text-xs sm:text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded-full font-medium">
                                             {product.gender.label}
                                         </Badge>
                                     )}
@@ -196,7 +196,7 @@ export default async function ProductDetailPage({ params }: Props) {
                                         <Link href={`/brands/${product.brand.slug}`}>
                                             <Badge
                                                 variant="secondary"
-                                                className="text-sm cursor-pointer hover:bg-gray-300 transition-colors"
+                                                className="text-xs sm:text-sm cursor-pointer hover:bg-gray-300 transition-colors font-medium"
                                             >
                                                 {product.brand.name}
                                             </Badge>
@@ -206,16 +206,16 @@ export default async function ProductDetailPage({ params }: Props) {
                                         <Link href={`/categories/${product.category.slug}`}>
                                             <Badge
                                                 variant="outline"
-                                                className="text-sm cursor-pointer hover:border-gray-500 transition-colors"
+                                                className="text-xs sm:text-sm cursor-pointer hover:border-gray-500 transition-colors font-medium"
                                             >
                                                 {product.category.name}
                                             </Badge>
                                         </Link>
                                     )}
                                     {product.gender && (
-                                        <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded-full">
+                                        <Badge variant='secondary' className="text-xs sm:text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded-full font-medium">
                                             {product.gender.label}
-                                        </span>
+                                        </Badge>
                                     )}
                                 </div>
 

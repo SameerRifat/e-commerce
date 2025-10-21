@@ -186,10 +186,9 @@ const ProductBasicInfoStep: React.FC<ProductBasicInfoStepProps> = ({
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                   </div>
-                  <FormDescription>
-                    SEO-friendly URL: /products/{field.value || "your-product-slug"}
-                    <br />
-                    {field.value?.length || 0}/{VALIDATION_RULES.product.slug.maxLength} characters
+                  <FormDescription className="flex items-center justify-between gap-x-4 gap-y-1">
+                    <span>SEO-friendly URL: /products/{field.value || "your-product-slug"}</span>
+                    <span>{field.value?.length || 0}/{VALIDATION_RULES.product.slug.maxLength} characters</span>
                   </FormDescription>
                   {fieldState.error && fieldState.isTouched && (
                     <FormMessage />

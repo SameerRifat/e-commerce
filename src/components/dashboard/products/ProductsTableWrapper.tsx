@@ -1,13 +1,15 @@
 // src/components/dashboard/products/ProductsTableWrapper.tsx
 "use client";
 
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import DataTable from "@/components/dashboard/data-table";
 import { renderImage, renderPrice, renderDate, renderBadge } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import type { DashboardProductListItem, DataTableColumn } from "@/types/dashboard";
+import { toast } from "sonner";
+import DeleteProductDialog from "./delete-product-dialog";
 
 interface ProductsTableWrapperProps {
   data: DashboardProductListItem[];
@@ -17,19 +19,42 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
   data,
 }) => {
   const router = useRouter();
+  
+  // State for delete dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<DashboardProductListItem | null>(null);
+  
+  // Track which product is being deleted for loading state
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   const handleEdit = (product: DashboardProductListItem) => {
     router.push(`/dashboard/products/${product.id}/edit`);
   };
 
   const handleDelete = (product: DashboardProductListItem) => {
-    console.log("Delete product:", product.id);
-    // TODO: Implement delete functionality
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
   };
 
   const handleView = (product: DashboardProductListItem) => {
     router.push(`/dashboard/products/${product.id}`);
   };
+
+  const handleDeleteSuccess = useCallback((productId: string) => {
+    // Set loading state
+    setDeletingProductId(productId);
+    
+    // Show success toast
+    toast.success("The product has been successfully deleted.");
+
+    // Refresh to get updated data from server
+    router.refresh();
+    
+    // Clear loading state after a short delay
+    setTimeout(() => {
+      setDeletingProductId(null);
+    }, 500);
+  }, [router]);
 
   const columns: DataTableColumn<DashboardProductListItem>[] = [
     {
@@ -129,7 +154,6 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
         );
       },
     },
-    // ✅ NEW: Reviews Column
     {
       key: "reviews",
       label: "Reviews",
@@ -188,14 +212,24 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
   ];
 
   return (
-    <DataTable
-      data={data}
-      columns={columns}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onView={handleView}
-      emptyMessage="No products found. Create your first product to get started."
-    />
+    <>
+      <DataTable
+        data={data}
+        columns={columns}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+        emptyMessage="No products found. Create your first product to get started."
+        isDeleting={(product) => deletingProductId === product.id}
+      />
+
+      <DeleteProductDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        product={productToDelete}
+        onDeleteSuccess={handleDeleteSuccess}
+      />
+    </>
   );
 };
 

@@ -57,7 +57,7 @@ export function UserSection({ user }: UserSectionProps) {
                     className="gap-2 !p-0 lg:!px-4 lg:!py-2 rounded-full lg:rounded-md"
                     aria-label="User menu"
                 >
-                    <Avatar>
+                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
                         <AvatarImage src={user.image || undefined} alt={user.name} className="object-cover"/>
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(user.name)}

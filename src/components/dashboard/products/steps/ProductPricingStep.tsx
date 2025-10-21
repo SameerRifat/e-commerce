@@ -178,7 +178,7 @@ const ProductPricingStep: React.FC<ProductPricingStepProps> = ({ control }) => {
             />
 
             <div className="space-y-2">
-              <FormLabel>Dimensions (cm)</FormLabel>
+              <FormLabel>Dimensions (cm) *</FormLabel>
               <div className="grid grid-cols-3 gap-2">
                 <FormField
                   control={control}
