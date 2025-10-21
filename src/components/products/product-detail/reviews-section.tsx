@@ -24,7 +24,7 @@ export default async function ReviewsSection({
   // ✅ FIX: Fetch initial reviews with same limit as ReviewsList expects
   const result = await getProductReviews(productId, {
     page: 1,
-    limit: 1, // Set to 1 for testing pagination
+    limit: 5,
     sortBy: "recent",
   });
 
