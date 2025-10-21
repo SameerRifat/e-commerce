@@ -212,7 +212,7 @@ export default async function DashboardPage() {
         {dashboardStats.map((stat) => (
           <Link key={stat.label} href={stat.href || '#'}>
             <Card className={`hover:shadow-md transition-shadow cursor-pointer ${stat.highlight ? 'ring-2 ring-orange-200' : ''}`}>
-              <CardContent className="p-6">
+              <CardContent>
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-lg ${stat.iconBg}`}>
                     <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
@@ -237,26 +237,77 @@ export default async function DashboardPage() {
 
       {/* Revenue Highlight Card */}
       <Card className="border-l-4 border-l-green-500">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between">
+        <CardContent className="p-4 sm:p-6">
+          {/* Mobile Layout */}
+          <div className="sm:hidden">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-green-100">
+                  <DollarSign className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="text-sm text-gray-600">Weekly Revenue</div>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard/orders" className="text-xs">
+                  Details
+                  <TrendingUp className="ml-1 h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
+            <div className="pl-12">
+              <div className="text-2xl font-bold text-gray-900 mb-2">
+                {formatCurrency(stats.weeklyRevenue)}
+              </div>
+              <div className="flex items-center gap-2">
+                {revenueTrend.trend === 'up' && (
+                  <>
+                    <ArrowUpRight className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-600">
+                      {revenueTrend.label} from last week
+                    </span>
+                  </>
+                )}
+                {revenueTrend.trend === 'down' && (
+                  <>
+                    <ArrowDownRight className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-medium text-red-600">
+                      {revenueTrend.label} from last week
+                    </span>
+                  </>
+                )}
+                {revenueTrend.trend === 'neutral' && (
+                  <span className="text-sm text-gray-600">No change from last week</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden sm:flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className="p-4 rounded-lg bg-green-100">
                 <DollarSign className="h-8 w-8 text-green-600" />
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Weekly Revenue</div>
-                <div className="text-3xl font-bold text-gray-900">{formatCurrency(stats.weeklyRevenue)}</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {formatCurrency(stats.weeklyRevenue)}
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   {revenueTrend.trend === 'up' && (
                     <>
                       <ArrowUpRight className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">{revenueTrend.label} from last week</span>
+                      <span className="text-sm font-medium text-green-600">
+                        {revenueTrend.label} from last week
+                      </span>
                     </>
                   )}
                   {revenueTrend.trend === 'down' && (
                     <>
                       <ArrowDownRight className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">{revenueTrend.label} from last week</span>
+                      <span className="text-sm font-medium text-red-600">
+                        {revenueTrend.label} from last week
+                      </span>
                     </>
                   )}
                   {revenueTrend.trend === 'neutral' && (
@@ -310,61 +361,105 @@ export default async function DashboardPage() {
           <h2 className="text-xl font-semibold text-gray-900">Recent Orders</h2>
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard/orders">
-              View All Orders
+              <span className="hidden sm:inline">View All Orders</span>
+              <span className="sm:hidden">View All</span>
               <ArrowUpRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-3 sm:p-6">
             {recentOrders.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p>No orders yet</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {recentOrders.map((order) => (
                   <Link
                     key={order.id}
                     href={`/dashboard/orders/${order.id}`}
-                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200"
+                    className="block p-3 sm:p-4 rounded-lg hover:bg-gray-50 transition-colors border border-border hover:border-gray-200"
                   >
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <ShoppingCart className="h-5 w-5 text-blue-600" />
+                    {/* Mobile Layout */}
+                    <div className="sm:hidden">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <ShoppingCart className="h-5 w-5 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span className="text-sm font-semibold text-gray-900">
+                              Order #{order.orderNumber}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs flex-shrink-0 ${statusColors[order.status]}`}
+                            >
+                              {order.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-600 mb-1">
+                            {order.customerName}
+                          </div>
+                          {order.shippingCity && (
+                            <div className="text-xs text-gray-500 mb-2">
+                              {order.shippingCity} • {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pl-13">
+                        <div className="text-xs text-gray-500">
+                          {getRelativeTime(order.createdAt)}
+                        </div>
+                        <div className="text-base font-semibold text-gray-900">
+                          {formatCurrency(order.totalAmount)}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-semibold text-gray-900">
-                          Order #{order.orderNumber}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${statusColors[order.status]}`}
-                        >
-                          {order.status.replace('_', ' ')}
-                        </Badge>
+
+                    {/* Desktop Layout */}
+                    <div className="hidden sm:flex items-center gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <ShoppingCart className="h-5 w-5 text-blue-600" />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span>{order.customerName}</span>
-                        {order.shippingCity && (
-                          <>
-                            <span>•</span>
-                            <span>{order.shippingCity}</span>
-                          </>
-                        )}
-                        <span>•</span>
-                        <span>{order.itemCount} {order.itemCount === 1 ? 'item' : 'items'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-gray-900">
+                            Order #{order.orderNumber}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${statusColors[order.status]}`}
+                          >
+                            {order.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <span>{order.customerName}</span>
+                          {order.shippingCity && (
+                            <>
+                              <span>•</span>
+                              <span>{order.shippingCity}</span>
+                            </>
+                          )}
+                          <span>•</span>
+                          <span>{order.itemCount} {order.itemCount === 1 ? 'item' : 'items'}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(order.totalAmount)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {getRelativeTime(order.createdAt)}
+                      <div className="flex-shrink-0 text-right">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(order.totalAmount)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {getRelativeTime(order.createdAt)}
+                        </div>
                       </div>
                     </div>
                   </Link>

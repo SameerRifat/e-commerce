@@ -63,7 +63,7 @@ export default function Sort() {
         Sort by
       </Label>
       <Select value={selected} onValueChange={onChange}>
-        <SelectTrigger id="sort-select" className="w-[160px] sm:w-[200px] text-xs sm:text-sm">
+        <SelectTrigger id="sort-select" className="w-[160px] sm:w-[200px] text-xs sm:text-sm px-2 py-0 sm:px-3 sm:py-2 !h-8 sm:!h-9">
           <SelectValue placeholder="Select sort order" />
         </SelectTrigger>
         <SelectContent>

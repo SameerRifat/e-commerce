@@ -15,7 +15,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   className,
 }) => {
   return (
-    <div className={cn("flex flex-col gap-4 pb-6", className)}>
+    <div className={cn("flex flex-col gap-4 sm:pb-6", className)}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>

@@ -31,7 +31,7 @@ export default function Navbar({ children }: NavbarProps) {
     return (
         <header className="sticky top-0 z-50 bg-background border-b border-border">
             <nav
-                className="custom_container flex h-[56px] sm:h-16 items-center gap-4 lg:gap-6"
+                className="custom_container flex h-[54px] sm:h-16 items-center gap-4 lg:gap-6"
                 aria-label="Primary navigation"
             >
                 {/* Logo - STATIC, renders immediately */}
@@ -73,8 +73,7 @@ export default function Navbar({ children }: NavbarProps) {
                         size="icon"
                         onClick={() => setMobileSearchOpen(true)}
                         aria-label="Search products"
-                        // className="md:hidden !p-0 h-fit rounded-full "
-                        className="rounded-full sm:rounded-md md:hidden"
+                        className="rounded-full sm:rounded-md md:hidden size-8"
                     >
                         <Search />
                     </Button>
@@ -84,21 +83,19 @@ export default function Navbar({ children }: NavbarProps) {
                         variant="secondary"
                         size="icon"
                         asChild
-                        // className="relative gap-2 p-0 sm:px-2 h-fit sm:h-9 rounded-full sm:rounded-md"
-                        className="!rounded-full sm:!rounded-md"
+                        className="!rounded-full sm:!rounded-md size-8 sm:size-9"
                     >
                         <Link href="/cart" aria-label={`Cart with ${itemCount} items`} className="">
                             <div className="relative">
                                 <ShoppingBag />
                                 {itemCount > 0 && (
                                     <Badge
-                                        className="absolute -top-3 -right-3 w-4 h-4 sm:w-5 sm:h-5 px-1 flex items-center justify-center text-[10px] pointer-events-none"
+                                        className="absolute -top-3 -right-3 w-4 h-4 sm:w-5 sm:h-5 px-1 flex items-center justify-center text-[10px] sm:text-[11px] pointer-events-none font-medium"
                                     >
                                         {itemCount > 99 ? "99+" : itemCount}
                                     </Badge>
                                 )}
                             </div>
-                            {/* <span className="hidden lg:inline">Cart</span> */}
                         </Link>
                     </Button>
 
@@ -115,8 +112,7 @@ export default function Navbar({ children }: NavbarProps) {
                                 variant="secondary"
                                 size="icon"
                                 aria-label="Toggle menu"
-                                // className="cursor-pointer md:hidden !p-0 h-fit"
-                                className="rounded-full sm:rounded-md md:hidden"
+                                className="rounded-full sm:rounded-md md:hidden size-8"
                             >
                                 <Menu />
                             </Button>

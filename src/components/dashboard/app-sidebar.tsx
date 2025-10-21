@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Package, Palette, Layers, Command, Boxes, Sparkles, ShoppingBag, Monitor, Users } from "lucide-react"
+import { Package, Palette, Layers, Command, Boxes, Sparkles, ShoppingBag, Monitor, Users, LayoutDashboard } from "lucide-react"
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { NavMain } from "./nav-main"
@@ -14,6 +14,11 @@ const data = {
         avatar: "/avatars/admin.jpg",
     },
     navMain: [
+        {
+            title: "Dashboard",
+            url: "/dashboard",
+            icon: LayoutDashboard, 
+        },
         {
             title: "Products",
             url: "/dashboard/products",

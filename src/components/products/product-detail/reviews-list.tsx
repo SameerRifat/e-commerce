@@ -276,7 +276,7 @@ export function ReviewsList({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteClick(review.id)}
-                          className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm"
                           disabled={isDeleting}
                         >
                           <Trash2 className="w-3.5 h-3.5" />

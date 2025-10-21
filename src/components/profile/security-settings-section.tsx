@@ -128,7 +128,7 @@ export default function SecuritySettingsSection({
               variant="outline"
               size="sm"
               onClick={() => setIsChangingPassword(true)}
-              className='textxs sm:text-sm'
+              className='text-xs sm:text-sm'
             >
               Change Password
             </Button>
