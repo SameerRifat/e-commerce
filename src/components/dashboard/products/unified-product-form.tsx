@@ -48,12 +48,6 @@ import StepNavigation from "./components/StepNavigation";
 const unifiedProductSchema = completeProductFormSchema;
 type UnifiedProductFormData = CompleteProductFormData;
 
-interface SizeCategory {
-  id: string;
-  name: string;
-  createdAt?: Date;
-}
-
 interface UnifiedProductFormProps {
   mode: "create" | "edit";
   productId?: string;
