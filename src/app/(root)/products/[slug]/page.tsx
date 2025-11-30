@@ -1,9 +1,8 @@
-// src/app/(root)/products/[slug]/page.tsx (UPDATED - was [id])
+// src/app/(root)/products/[slug]/page.tsx
 import { Suspense } from "react";
 import { CollapsibleSection, ProductGallery } from "@/components";
 import SimpleProductAddToCart from "@/components/products/product-detail/simple-product-add-to-cart";
 import ConfigurableProductAddToCart from "@/components/products/product-detail/configurable-product-add-to-cart";
-import { VariantSelectionProvider } from "@/components/VariantSelector";
 import { getProductBySlug, type FullProduct } from "@/lib/actions/product";
 import RichTextViewer from "@/components/dashboard/rich-text-viewer";
 import ReviewsSection from "@/components/products/product-detail/reviews-section";
@@ -17,10 +16,21 @@ import Link from "next/link";
 
 type Props = {
     params: Promise<{ slug: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default async function ProductDetailPage({ params }: Props) {
+/**
+ * Product Detail Page - Server Component
+ *
+ * Industry Pattern: URL-based variant selection (Shopify Hydrogen approach)
+ * - Variant state in URL params (?color=coral&size=1ml)
+ * - SEO-friendly (each variant has unique URL)
+ * - Shareable product links with specific variant selected
+ * - Progressive enhancement compatible
+ */
+export default async function ProductDetailPage({ params, searchParams }: Props) {
     const { slug } = await params;
+    const sp = await searchParams;
     const data = await getProductBySlug(slug);
 
     if (!data) {
@@ -30,8 +40,6 @@ export default async function ProductDetailPage({ params }: Props) {
     const { product, variants, images } = data;
     const isSimpleProduct = product.productType === 'simple';
     const isConfigurable = product.productType === 'configurable';
-
-    // console.log('[ProductDetailPage] data:', JSON.stringify(data, null, 2));
 
     type GalleryVariant = { color: string; images: string[] };
     let galleryVariants: GalleryVariant[] = [];
@@ -91,6 +99,12 @@ export default async function ProductDetailPage({ params }: Props) {
         }
     }
 
+    // Get selected color from URL for gallery
+    const selectedColorSlug = typeof sp.color === 'string' ? sp.color : undefined;
+    const selectedColorName = selectedColorSlug
+        ? variants.find(v => v.color?.slug === selectedColorSlug)?.color?.name
+        : undefined;
+
     return (
         <main className="custom_container">
             {/* Breadcrumb */}
@@ -98,15 +112,14 @@ export default async function ProductDetailPage({ params }: Props) {
 
             <section className="grid grid-cols-1 gap-8 sm:gap-10 2xl:gap-14 lg:grid-cols-2 2xl:grid-cols-[1fr_650px]">
                 {isConfigurable ? (
-                    <VariantSelectionProvider
-                        productId={product.id}
-                        variants={variants}
-                        galleryVariants={galleryVariants}
-                        defaultColorId={variants.find(v => v.id === product.defaultVariantId)?.color?.id}
-                        defaultSizeId={variants.find(v => v.id === product.defaultVariantId)?.size?.id}
-                    >
+                    <>
+                        {/* Product Gallery - Simple prop-based pattern */}
                         {galleryVariants.length > 0 && (
-                            <ProductGallery productId={product.id} variants={galleryVariants} className="lg:sticky lg:top-6" />
+                            <ProductGallery
+                                variants={galleryVariants}
+                                selectedColorName={selectedColorName}
+                                className="lg:sticky lg:top-6"
+                            />
                         )}
 
                         <div className="flex flex-col gap-6">
@@ -141,22 +154,16 @@ export default async function ProductDetailPage({ params }: Props) {
                                             {product.gender.label}
                                         </Badge>
                                     )}
-                                    {/* {product.gender && (
-                                        <span className="text-gray-600 px-2 py-1 bg-gray-100 rounded">
-                                            {product.gender.label}
-                                        </span>
-                                    )} */}
                                 </div>
                             </header>
 
+                            {/* URL-based variant selection */}
                             <ConfigurableProductAddToCart
                                 productId={product.id}
                                 productName={product.name}
                                 productSlug={product.slug}
                                 variants={variants as FullProduct['variants']}
                             />
-
-                            {/* <Separator /> */}
 
                             <div>
                                 <CollapsibleSection title="Product Details" value="details" defaultOpen>
@@ -178,11 +185,14 @@ export default async function ProductDetailPage({ params }: Props) {
                                 </Suspense>
                             </div>
                         </div>
-                    </VariantSelectionProvider>
+                    </>
                 ) : (
                     <>
                         {galleryVariants.length > 0 && (
-                            <ProductGallery productId={product.id} variants={galleryVariants} className="lg:sticky lg:top-6" />
+                            <ProductGallery
+                                variants={galleryVariants}
+                                className="lg:sticky lg:top-6"
+                            />
                         )}
 
                         <div className="flex flex-col gap-6">

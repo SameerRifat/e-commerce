@@ -37,7 +37,7 @@ export default function SimpleProductAddToCart({
   productSlug,
   product,
 }: SimpleProductAddToCartProps) {
-  const { addItem, formatPrice, error, clearError, items } = useCartStore();
+  const { addItem, formatPrice, error, clearError } = useCartStore();
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -47,20 +47,6 @@ export default function SimpleProductAddToCart({
     price: product.price || '0',
     salePrice: product.salePrice || null,
     inStock: product.inStock ?? 0,
-  };
-
-  const getOptimisticProductDetails = () => {
-    if (!selectedProduct) return undefined;
-
-    return {
-      name: productName,
-      slug: productSlug,
-      price: parseFloat(selectedProduct.price),
-      salePrice: selectedProduct.salePrice ? parseFloat(selectedProduct.salePrice) : undefined,
-      image: undefined,
-      sku: selectedProduct.sku,
-      inStock: selectedProduct.inStock,
-    };
   };
 
   const handleAddToCart = async () => {
@@ -81,29 +67,13 @@ export default function SimpleProductAddToCart({
       return;
     }
 
-    const isAlreadyAdding = items.some(item =>
-      item.productId === selectedProduct.id &&
-      item.isSimpleProduct &&
-      item.pendingOperation === 'add'
-    );
-
-    if (isAlreadyAdding) {
-      toast.info('This item is already being added to your cart');
-      return;
-    }
-
     setIsAdding(true);
 
-    const optimisticDetails = getOptimisticProductDetails();
-
-    // ❌ REMOVED: Don't show success toast here
-    // toast.success(...)
-
     try {
-      const success = await addItem(selectedProduct.id, null, true, quantity, optimisticDetails);
+      // Simple pattern: loading → server call → re-fetch (Shopify/WooCommerce approach)
+      const success = await addItem(selectedProduct.id, null, true, quantity);
 
       if (success) {
-        // ✅ Show success toast ONLY after server confirms
         toast.success(
           <div className="flex items-center gap-2">
             <Check className="h-4 w-4" />

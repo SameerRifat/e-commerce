@@ -1,4 +1,3 @@
-// src/components/products/product-detail/configurable-product-add-to-cart.tsx
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
-import { useVariantSelection } from '../../VariantSelector';
+import { VariantSelector, useSelectedVariant } from './variant-selector';
 import type { FullProduct } from '@/lib/actions/product';
 
 type Variant = FullProduct['variants'][number];
@@ -26,37 +25,12 @@ export default function ConfigurableProductAddToCart({
   productSlug,
   variants,
 }: ConfigurableProductAddToCartProps) {
-  const { addItem, formatPrice, error, clearError, items } = useCartStore();
-  const variantSelection = useVariantSelection();
+  const { addItem, formatPrice, error, clearError } = useCartStore();
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
-  const selectedVariant = variantSelection.selectedVariant;
-  const availableColors = variantSelection.availableColors;
-  const availableSizes = variantSelection.availableSizes;
-  const selectedColorId = variantSelection.selectedColorId;
-  const selectedSizeId = variantSelection.selectedSizeId;
-
-  const getOptimisticProductDetails = () => {
-    if (!selectedVariant) return undefined;
-
-    return {
-      name: productName,
-      slug: productSlug,
-      price: parseFloat(selectedVariant.price),
-      salePrice: selectedVariant.salePrice ? parseFloat(selectedVariant.salePrice) : undefined,
-      image: undefined,
-      color: {
-        name: selectedVariant.color?.name || 'Unknown',
-        hexCode: selectedVariant.color?.hexCode || '#000000',
-      },
-      size: {
-        name: selectedVariant.size?.name || 'Unknown',
-      },
-      sku: selectedVariant.sku,
-      inStock: selectedVariant.inStock,
-    };
-  };
+  // URL-based variant selection (Shopify Hydrogen pattern)
+  const selectedVariant = useSelectedVariant(variants);
 
   const handleAddToCart = async () => {
     if (error) clearError();
@@ -76,29 +50,13 @@ export default function ConfigurableProductAddToCart({
       return;
     }
 
-    const isAlreadyAdding = items.some(item =>
-      item.productVariantId === selectedVariant.id &&
-      !item.isSimpleProduct &&
-      item.pendingOperation === 'add'
-    );
-
-    if (isAlreadyAdding) {
-      toast.info('This variant is already being added to your cart');
-      return;
-    }
-
     setIsAdding(true);
 
-    const optimisticDetails = getOptimisticProductDetails();
-
-    // ❌ REMOVED: Don't show success toast here
-    // toast.success(...)
-
     try {
-      const success = await addItem(productId, selectedVariant.id, false, quantity, optimisticDetails);
+      // Simple pattern: loading → server call → re-fetch (Shopify/WooCommerce approach)
+      const success = await addItem(productId, selectedVariant.id, false, quantity);
 
       if (success) {
-        // ✅ Show success toast ONLY after server confirms
         toast.success(
           <div className="flex items-center gap-2">
             <Check className="h-4 w-4" />
@@ -129,7 +87,7 @@ export default function ConfigurableProductAddToCart({
 
   return (
     <div className="space-y-6">
-      {/* Error Display with Shadcn Alert */}
+      {/* Error Display */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -147,7 +105,7 @@ export default function ConfigurableProductAddToCart({
         </Alert>
       )}
 
-      {/* Price Display with Shadcn Badge */}
+      {/* Price Display */}
       {selectedVariant && (
         <div className="flex items-center gap-3">
           <p className="text-2xl sm:text-3xl font-semibold sm:font-bold">
@@ -168,70 +126,10 @@ export default function ConfigurableProductAddToCart({
         </div>
       )}
 
-      {/* Color Selection */}
-      {availableColors.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm sm:text-base font-medium">
-            Color: {availableColors.find(c => c.id === selectedColorId)?.name || 'Select'}
-          </h3>
-          <div className="flex flex-wrap gap-3">
-            {availableColors.map((color) => {
-              const isSelected = selectedColorId === color.id;
+      {/* Variant Selector (URL-based state management) */}
+      <VariantSelector variants={variants} productSlug={productSlug} />
 
-              return (
-                <Button
-                  key={color.id}
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => variantSelection.setSelectedColor(color.id)}
-                  className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 p-0 ${isSelected
-                    ? 'border-gray-800 shadow-md'
-                    : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  title={color.name}
-                >
-                  <div
-                    className="w-8 h-8 rounded-full border border-gray-200"
-                    style={{ backgroundColor: color.hexCode }}
-                  />
-                  {isSelected && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-800 rounded-full flex items-center justify-center">
-                      <Check className="!w-3 !h-3 text-white" />
-                    </div>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Size Selection */}
-      {availableSizes.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm sm:text-base font-medium">
-            Size: {availableSizes.find(s => s.id === selectedSizeId)?.name || 'Select'}
-          </h3>
-          <div className="grid grid-cols-4 2xl:grid-cols-5 gap-3">
-            {availableSizes.map((size) => {
-              const isSelected = selectedSizeId === size.id;
-
-              return (
-                <Button
-                  key={size.id}
-                  variant={isSelected ? "default" : "outline"}
-                  onClick={() => variantSelection.setSelectedSize(size.id)}
-                  className="text-sm sm:font-medium h-8 sm:h-9"
-                >
-                  {size.name}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Stock Status with Shadcn Badge */}
+      {/* Stock Status */}
       {selectedVariant && (
         <div className="flex items-center gap-2">
           {selectedVariant.inStock > 0 ? (

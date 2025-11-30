@@ -27,10 +27,10 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
   // Helper function to check if user has interacted with a step
   const hasUserInteractedWithStep = useCallback((stepIndex: number): boolean => {
     const isSimpleProduct = formData.productType === 'simple';
-    
+
     switch (stepIndex) {
       case 0: // Basic Info - only consider meaningful interaction
-        return !!(formData.name && formData.name.length > 0) || 
+        return !!(formData.name && formData.name.length > 0) ||
                !!(formData.description && formData.description.length > 0);
       case 1: // Pricing/Variants
         if (isSimpleProduct) {
@@ -41,12 +41,6 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
         }
       case 2: // Images
         return formData.images && formData.images.length > 0;
-      case 3: // Inventory
-        if (isSimpleProduct) {
-          return formData.inStock !== undefined && formData.inStock !== null;
-        } else {
-          return formData.variants && formData.variants.some(v => v.inStock !== undefined);
-        }
       default:
         return false;
     }
@@ -60,21 +54,20 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
       simple: validateStep.simple(formData),
       variants: validateStep.variants(formData),
       images: validateStep.images(formData),
-      inventory: validateStep.inventory(formData),
     };
 
     return {
       0: {
         isValid: results.basic.success,
-        errors: hasUserInteractedWithStep(0) && !results.basic.success ? 
+        errors: hasUserInteractedWithStep(0) && !results.basic.success ?
           (results.basic.error?.issues || []).map(e => e.message) : [],
         warnings: [],
       },
       1: {
         isValid: isSimpleProduct ? results.simple.success : results.variants.success,
-        errors: hasUserInteractedWithStep(1) && 
-          (isSimpleProduct ? !results.simple.success : !results.variants.success) ? 
-          (isSimpleProduct ? 
+        errors: hasUserInteractedWithStep(1) &&
+          (isSimpleProduct ? !results.simple.success : !results.variants.success) ?
+          (isSimpleProduct ?
             (results.simple.error?.issues || []).map(e => e.message) :
             (results.variants.error?.issues || []).map(e => e.message)
           ) : [],
@@ -82,14 +75,8 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
       },
       2: {
         isValid: results.images.success,
-        errors: hasUserInteractedWithStep(2) && !results.images.success ? 
+        errors: hasUserInteractedWithStep(2) && !results.images.success ?
           (results.images.error?.issues || []).map(e => e.message) : [],
-        warnings: [],
-      },
-      3: {
-        isValid: results.inventory.success,
-        errors: hasUserInteractedWithStep(3) && !results.inventory.success ? 
-          (results.inventory.error?.issues || []).map(e => e.message) : [],
         warnings: [],
       },
     };
@@ -97,22 +84,20 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
 
   // Check which steps are completed
   const completedSteps = useMemo(() => {
-    const isSimpleProduct = formData.productType === 'simple';
-    const maxSteps = isSimpleProduct ? 3 : 4; // Simple: 0,1,2; Configurable: 0,1,2,3
+    const maxSteps = 3; // Always 3 steps: Basic Info, Variants/Pricing, Images
     const stepIndices = Array.from({ length: maxSteps }, (_, i) => i);
-    
-    return stepIndices.filter(stepIndex => 
+
+    return stepIndices.filter(stepIndex =>
       isStepCompleted(stepIndex, formData)
     );
   }, [formData]);
 
   // Check which steps can be accessed
   const accessibleSteps = useMemo(() => {
-    const isSimpleProduct = formData.productType === 'simple';
-    const maxSteps = isSimpleProduct ? 3 : 4; // Simple: 0,1,2; Configurable: 0,1,2,3
+    const maxSteps = 3; // Always 3 steps: Basic Info, Variants/Pricing, Images
     const stepIndices = Array.from({ length: maxSteps }, (_, i) => i);
-    
-    return stepIndices.filter(stepIndex => 
+
+    return stepIndices.filter(stepIndex =>
       canAccessStep(stepIndex, formData)
     );
   }, [formData]);
@@ -152,17 +137,15 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
 
   // Check if form is ready for submission
   const isFormReadyForSubmission = useMemo(() => {
-    const isSimpleProduct = formData.productType === 'simple';
-    const requiredSteps = isSimpleProduct ? 3 : 3; // Simple: basic, pricing, images; Configurable: basic, variants, images (inventory is optional)
+    const requiredSteps = 3; // All product types: basic, pricing/variants, images
     return completedSteps.length >= requiredSteps;
-  }, [completedSteps, formData.productType]);
+  }, [completedSteps]);
 
   // Get progress percentage
   const progressPercentage = useMemo(() => {
-    const isSimpleProduct = formData.productType === 'simple';
-    const totalSteps = isSimpleProduct ? 3 : 4;
+    const totalSteps = 3; // Always 3 steps
     return Math.round((completedSteps.length / totalSteps) * 100);
-  }, [completedSteps, formData.productType]);
+  }, [completedSteps]);
 
   // Validate specific field
   const validateField = useCallback(async (fieldName: string): Promise<boolean> => {
@@ -188,13 +171,6 @@ export const useStepValidation = ({ form, currentStep }: UseStepValidationProps)
         break;
       case 2: // Images
         fieldsToValidate = ["images"];
-        break;
-      case 3: // Inventory
-        if (isSimpleProduct) {
-          fieldsToValidate = ["inStock"];
-        } else {
-          fieldsToValidate = ["variants"];
-        }
         break;
     }
 

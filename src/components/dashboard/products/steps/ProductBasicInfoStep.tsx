@@ -1,7 +1,7 @@
 // src/components/dashboard/products/steps/ProductBasicInfoStep.tsx
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Control, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { Package, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,32 +56,18 @@ const ProductBasicInfoStep: React.FC<ProductBasicInfoStepProps> = ({
   brands,
   categories,
   genders,
-  mode = "create", 
+  mode = "create",
 }) => {
   const productName = watch("name");
-  const currentSlug = watch("slug");
-  const [slugManuallyEdited, setSlugManuallyEdited] = React.useState(false);
+  const [slugManuallyEdited, setSlugManuallyEdited] = React.useState(mode === "edit");
 
-  // Track if this is the initial mount in edit mode
-  const isInitialMount = useRef(true);
-  const initialSlug = useRef<string | null>(null);
-
-  // Capture initial slug on mount (for edit mode)
+  // Auto-generate slug from name (only if not manually edited)
   useEffect(() => {
-    if (isInitialMount.current && mode === "edit" && currentSlug) {
-      initialSlug.current = currentSlug;
-      isInitialMount.current = false;
-      console.log("📌 Captured initial slug in edit mode:", currentSlug);
-    }
-  }, [currentSlug, mode]);
-
-  // Auto-generate slug from name (only in CREATE mode and if not manually edited)
-  useEffect(() => {
-    if (mode === "create" && productName && !slugManuallyEdited) {
+    if (productName && !slugManuallyEdited) {
       const generatedSlug = generateSlugFromName(productName);
       setValue("slug", generatedSlug, { shouldValidate: true });
     }
-  }, [productName, slugManuallyEdited, setValue, mode]);
+  }, [productName, slugManuallyEdited, setValue]);
 
   return (
     <Card>

@@ -4,7 +4,7 @@
 import { db } from "@/lib/db";
 import { carts, cartItems, productImages, guests, products, productVariants, colors, sizes } from "@/lib/db/schema";
 import { getCurrentUser, guestSession, createGuestSession } from "@/lib/auth/actions";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Enhanced cart item type supporting both simple and configurable products
@@ -113,187 +113,191 @@ async function getOrCreateCart() {
 }
 
 // Get cart with all item details - handles both simple and configurable products
+// Industry Pattern: Single query with JOINs (WooCommerce, Shopify, Magento approach)
+// Benefits: Eliminates N+1 query problem, faster performance, cleaner code
 export async function getCart(): Promise<{ items: CartItemWithDetails[]; total: number }> {
   try {
     const { cart } = await getOrCreateCart();
 
-    // Get all cart items
-    const cartItemsData = await db
+    // Single optimized query with all necessary JOINs
+    // Follows same pattern as getProductBySlug for consistency
+    const rows = await db
       .select({
-        id: cartItems.id,
+        // Cart item fields
+        cartItemId: cartItems.id,
         cartId: cartItems.cartId,
         productId: cartItems.productId,
         productVariantId: cartItems.productVariantId,
         isSimpleProduct: cartItems.isSimpleProduct,
         quantity: cartItems.quantity,
+
+        // Product fields (for simple products and parent of configurable)
+        productName: products.name,
+        productSlug: products.slug,
+        productDescription: products.description,
+        productPrice: products.price,
+        productSalePrice: products.salePrice,
+        productSku: products.sku,
+        productInStock: products.inStock,
+
+        // Variant fields (for configurable products)
+        variantId: productVariants.id,
+        variantSku: productVariants.sku,
+        variantPrice: productVariants.price,
+        variantSalePrice: productVariants.salePrice,
+        variantInStock: productVariants.inStock,
+
+        // Color fields
+        colorId: colors.id,
+        colorName: colors.name,
+        colorHexCode: colors.hexCode,
+
+        // Size fields
+        sizeId: sizes.id,
+        sizeName: sizes.name,
+
+        // Image fields
+        imageId: productImages.id,
+        imageUrl: productImages.url,
+        imageIsPrimary: productImages.isPrimary,
+        imageSortOrder: productImages.sortOrder,
+        imageVariantId: productImages.variantId,
       })
       .from(cartItems)
-      .where(eq(cartItems.cartId, cart.id));
+      .leftJoin(products, eq(products.id, cartItems.productId))
+      .leftJoin(productVariants, eq(productVariants.id, cartItems.productVariantId))
+      .leftJoin(colors, eq(colors.id, productVariants.colorId))
+      .leftJoin(sizes, eq(sizes.id, productVariants.sizeId))
+      .leftJoin(productImages,
+        or(
+          // For simple products: product-level images only
+          and(
+            eq(productImages.productId, products.id),
+            sql`${cartItems.isSimpleProduct} = true`,
+            sql`${productImages.variantId} IS NULL`
+          ),
+          // For configurable products: variant-specific or product-level images
+          and(
+            eq(productImages.productId, products.id),
+            sql`${cartItems.isSimpleProduct} = false`,
+            or(
+              eq(productImages.variantId, productVariants.id),
+              sql`${productImages.variantId} IS NULL`
+            )
+          )
+        )
+      )
+      .where(eq(cartItems.cartId, cart.id))
+      .orderBy(
+        asc(cartItems.id),
+        desc(productImages.isPrimary),
+        asc(productImages.sortOrder)
+      );
 
-    if (!cartItemsData.length) {
+    if (!rows.length) {
       return { items: [], total: 0 };
     }
 
-    const cartItemsWithDetails: CartItemWithDetails[] = [];
+    // Group rows by cart item and build result
+    const cartItemsMap = new Map<string, CartItemWithDetails>();
+    const imagesMap = new Map<string, Array<{ id: string; url: string; isPrimary: boolean }>>();
 
-    for (const cartItem of cartItemsData) {
-      if (cartItem.isSimpleProduct && cartItem.productId) {
-        // Handle simple product
-        const productData = await db
-          .select({
-            id: products.id,
-            name: products.name,
-            slug: products.slug, // ADDED
-            description: products.description,
-            price: products.price,
-            salePrice: products.salePrice,
-            sku: products.sku,
-            inStock: products.inStock,
-          })
-          .from(products)
-          .where(eq(products.id, cartItem.productId))
-          .limit(1);
+    for (const row of rows) {
+      const cartItemId = row.cartItemId;
 
-        if (!productData.length) continue;
-
-        const product = productData[0];
-
-        // Get product images
-        const productImagesData = await db
-          .select({
-            id: productImages.id,
-            url: productImages.url,
-            isPrimary: productImages.isPrimary,
-          })
-          .from(productImages)
-          .where(and(
-            eq(productImages.productId, product.id),
-            sql`${productImages.variantId} IS NULL` // Only product-level images for simple products
-          ))
-          .orderBy(desc(productImages.isPrimary), productImages.sortOrder);
-
-        cartItemsWithDetails.push({
-          id: cartItem.id,
-          cartId: cartItem.cartId,
-          productId: cartItem.productId,
-          productVariantId: null,
-          isSimpleProduct: true,
-          quantity: cartItem.quantity,
-          product: {
-            id: product.id,
-            name: product.name,
-            slug: product.slug, // ADDED
-            description: product.description,
-            price: product.price || "0",
-            salePrice: product.salePrice,
-            sku: product.sku || "",
-            inStock: product.inStock || 0,
-            images: productImagesData.map(img => ({
-              id: img.id,
-              url: img.url,
-              isPrimary: img.isPrimary || false,
-            })),
-          },
-        });
-      } else if (!cartItem.isSimpleProduct && cartItem.productVariantId) {
-        // Handle configurable product variant
-        const variantData = await db
-          .select({
-            // Variant fields
-            variantId: productVariants.id,
-            variantSku: productVariants.sku,
-            variantPrice: productVariants.price,
-            variantSalePrice: productVariants.salePrice,
-            variantInStock: productVariants.inStock,
-            variantColorId: productVariants.colorId,
-            variantSizeId: productVariants.sizeId,
-
-            // Product fields
-            productId: products.id,
-            productName: products.name,
-            productSlug: products.slug, // ADDED
-            productDescription: products.description,
-
-            // Color fields
-            colorId: colors.id,
-            colorName: colors.name,
-            colorHexCode: colors.hexCode,
-
-            // Size fields
-            sizeId: sizes.id,
-            sizeName: sizes.name,
-          })
-          .from(cartItems)
-          .innerJoin(productVariants, eq(productVariants.id, cartItems.productVariantId))
-          .innerJoin(products, eq(products.id, productVariants.productId))
-          .leftJoin(colors, eq(colors.id, productVariants.colorId))
-          .leftJoin(sizes, eq(sizes.id, productVariants.sizeId))
-          .where(eq(cartItems.id, cartItem.id))
-          .limit(1);
-
-        if (!variantData.length) continue;
-
-        const variant = variantData[0];
-
-        // Get variant images - include both variant-specific and product-level images
-        const variantImagesData = await db
-          .select({
-            id: productImages.id,
-            url: productImages.url,
-            isPrimary: productImages.isPrimary,
-            variantId: productImages.variantId,
-          })
-          .from(productImages)
-          .where(eq(productImages.productId, variant.productId))
-          .orderBy(desc(productImages.isPrimary), productImages.sortOrder);
-
-        // Filter to prefer variant-specific images, but fall back to product-level images
-        const filteredImages = variantImagesData.filter(img =>
-          img.variantId === variant.variantId || img.variantId === null
-        ).sort((a, b) => {
-          // Prioritize variant-specific images over product-level images
-          if (a.variantId === variant.variantId && b.variantId === null) return -1;
-          if (a.variantId === null && b.variantId === variant.variantId) return 1;
-          return 0;
-        });
-
-        cartItemsWithDetails.push({
-          id: cartItem.id,
-          cartId: cartItem.cartId,
-          productId: variant.productId,
-          productVariantId: cartItem.productVariantId,
-          isSimpleProduct: false,
-          quantity: cartItem.quantity,
-          variant: {
-            id: variant.variantId,
-            sku: variant.variantSku,
-            price: variant.variantPrice,
-            salePrice: variant.variantSalePrice,
-            inStock: variant.variantInStock,
+      // Build cart item if not yet created
+      if (!cartItemsMap.has(cartItemId)) {
+        if (row.isSimpleProduct) {
+          // Simple product
+          cartItemsMap.set(cartItemId, {
+            id: cartItemId,
+            cartId: row.cartId,
+            productId: row.productId,
+            productVariantId: null,
+            isSimpleProduct: true,
+            quantity: row.quantity,
             product: {
-              id: variant.productId,
-              name: variant.productName,
-              slug: variant.productSlug, // ADDED
-              description: variant.productDescription,
+              id: row.productId!,
+              name: row.productName!,
+              slug: row.productSlug!,
+              description: row.productDescription!,
+              price: row.productPrice || "0",
+              salePrice: row.productSalePrice,
+              sku: row.productSku || "",
+              inStock: row.productInStock || 0,
+              images: [], // Will be populated below
             },
-            color: variant.colorId ? {
-              id: variant.colorId,
-              name: variant.colorName!,
-              hexCode: variant.colorHexCode!,
-            } : null,
-            size: variant.sizeId ? {
-              id: variant.sizeId,
-              name: variant.sizeName!,
-            } : null,
-            images: filteredImages.map(img => ({
-              id: img.id,
-              url: img.url,
-              isPrimary: img.isPrimary || false,
-            })),
-          },
-        });
+          });
+          imagesMap.set(cartItemId, []);
+        } else {
+          // Configurable product
+          cartItemsMap.set(cartItemId, {
+            id: cartItemId,
+            cartId: row.cartId,
+            productId: row.productId,
+            productVariantId: row.productVariantId,
+            isSimpleProduct: false,
+            quantity: row.quantity,
+            variant: {
+              id: row.variantId!,
+              sku: row.variantSku!,
+              price: row.variantPrice || "0",
+              salePrice: row.variantSalePrice,
+              inStock: row.variantInStock || 0,
+              product: {
+                id: row.productId!,
+                name: row.productName!,
+                slug: row.productSlug!,
+                description: row.productDescription!,
+              },
+              color: row.colorId ? {
+                id: row.colorId,
+                name: row.colorName!,
+                hexCode: row.colorHexCode!,
+              } : null,
+              size: row.sizeId ? {
+                id: row.sizeId,
+                name: row.sizeName!,
+              } : null,
+              images: [], // Will be populated below
+            },
+          });
+          imagesMap.set(cartItemId, []);
+        }
+      }
+
+      // Add image if exists and not already added
+      if (row.imageId && row.imageUrl) {
+        const images = imagesMap.get(cartItemId)!;
+        if (!images.some(img => img.id === row.imageId)) {
+          images.push({
+            id: row.imageId,
+            url: row.imageUrl,
+            isPrimary: row.imageIsPrimary || false,
+          });
+        }
       }
     }
+
+    // Populate images into cart items
+    for (const [cartItemId, item] of cartItemsMap.entries()) {
+      const images = imagesMap.get(cartItemId) || [];
+
+      // Sort images: variant-specific first, then product-level, prioritize isPrimary
+      const sortedImages = images.sort((a, b) => {
+        if (a.isPrimary && !b.isPrimary) return -1;
+        if (!a.isPrimary && b.isPrimary) return 1;
+        return 0;
+      });
+
+      if (item.product) {
+        item.product.images = sortedImages;
+      } else if (item.variant) {
+        item.variant.images = sortedImages;
+      }
+    }
+
+    const cartItemsWithDetails = Array.from(cartItemsMap.values());
 
     // Calculate total
     const total = cartItemsWithDetails.reduce((sum, item) => {

@@ -298,22 +298,6 @@ export const imagesSchema = z.object({
     }),
 });
 
-// Step 4: Inventory Schema (validates stock levels)
-export const inventorySchema = z.object({
-  variants: z
-    .array(variantSchema)
-    .superRefine((variants, ctx) => {
-      // Business rule: At least one variant should have stock > 0 for published products
-      const hasStock = variants.some(v => v.inStock > 0);
-      if (!hasStock) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Warning: No variants have stock. Consider adding inventory before publishing.",
-          path: [],
-        });
-      }
-    }),
-});
 
 // Complete form schema (all steps combined)
 export const completeProductFormSchema = z.object({
@@ -380,7 +364,6 @@ export type SimpleProductData = z.infer<typeof simpleProductSchema>;
 export type VariantData = z.infer<typeof variantSchema>;
 export type VariantsData = z.infer<typeof variantsSchema>;
 export type ImagesData = z.infer<typeof imagesSchema>;
-export type InventoryData = z.infer<typeof inventorySchema>;
 export type CompleteProductFormData = z.infer<typeof completeProductFormSchema>;
 
 // Step validation functions
@@ -389,11 +372,10 @@ export const validateStep = {
   simple: (data: Partial<SimpleProductData>) => simpleProductSchema.safeParse(data),
   variants: (data: Partial<VariantsData>) => variantsSchema.safeParse(data),
   images: (data: Partial<ImagesData>) => imagesSchema.safeParse(data),
-  inventory: (data: Partial<InventoryData>) => inventorySchema.safeParse(data),
 };
 
 // Helper function to check if step can be accessed
-  export const canAccessStep = (stepIndex: number, formData: Partial<CompleteProductFormData>): boolean => {
+export const canAccessStep = (stepIndex: number, formData: Partial<CompleteProductFormData>): boolean => {
   const isSimpleProduct = formData.productType === 'simple';
   const basicValid = validateStep.basic(formData).success;
 
@@ -408,12 +390,6 @@ export const validateStep = {
       } else {
         return basicValid && validateStep.variants(formData).success;
       }
-    case 3: // Inventory (only for configurable products) - requires images to be valid
-      if (isSimpleProduct) {
-        return false; // Simple products don't have inventory step
-      }
-      const step1Valid = validateStep.variants(formData).success;
-      return basicValid && step1Valid && validateStep.images(formData).success;
     default:
       return false;
   }
@@ -434,11 +410,6 @@ export const isStepCompleted = (stepIndex: number, formData: Partial<CompletePro
       }
     case 2:
       return validateStep.images(formData).success;
-    case 3:
-      if (isSimpleProduct) {
-        return false; // Simple products don't have this step
-      }
-      return validateStep.inventory(formData).success;
     default:
       return false;
   }

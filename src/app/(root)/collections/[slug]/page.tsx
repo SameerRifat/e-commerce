@@ -1,4 +1,4 @@
-// src/app/(root)/collections/[slug]/page.tsx (FIXED & PRODUCTION-READY)
+// src/app/(root)/collections/[slug]/page.tsx 
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Metadata } from "next";

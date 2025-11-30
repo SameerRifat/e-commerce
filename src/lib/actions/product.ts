@@ -1,4 +1,17 @@
-// src/lib/actions/product.ts (Enhanced version)
+// src/lib/actions/product.ts (Optimized version)
+/**
+ * E-commerce Product Filtering - Optimized Queries
+ *
+ * Industry Pattern: Direct JOINs instead of subqueries for better performance
+ * - Uses indexes on join columns (WooCommerce pattern)
+ * - Filters before joining when possible (Query optimization best practice)
+ * - Simplified WHERE conditions for better query planner usage
+ *
+ * References:
+ * - https://whitelabelcoders.com/blog/what-is-database-query-optimization-and-why-is-it-important-to-scale-my-woocommerce-store/
+ * - https://www.acceldata.io/blog/query-optimization-in-sql-essential-techniques-tools-and-best-practices
+ * - https://developer.woocommerce.com/2022/02/02/new-product-filtering-by-attributes-rolling-out-in-woocommerce-6-3/
+ */
 "use server";
 
 import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
@@ -12,7 +25,6 @@ import {
   products,
   sizes,
   colors,
-  users,
   reviews,
   type SelectProduct,
   type SelectProductImage,
@@ -53,59 +65,34 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
     conds.push(or(ilike(products.name, pattern), ilike(products.description, pattern))!);
   }
 
-  // Gender filter
-  if (filters?.genderSlugs?.length) {
-    const genderSubquery = db
-      .select({ id: genders.id })
-      .from(genders)
-      .where(inArray(genders.slug, filters.genderSlugs));
-    conds.push(inArray(products.genderId, genderSubquery));
-  }
+  // ===== SIMPLIFIED: Direct filter conditions instead of subqueries =====
+  // Gender filter - direct condition, will be joined later
+  const hasGenderFilter = filters?.genderSlugs?.length;
+  const hasBrandFilter = filters?.brandSlugs?.length;
+  const hasCategoryFilter = filters?.categorySlugs?.length;
+  const hasSizeFilter = filters?.sizeSlugs?.length;
+  const hasColorFilter = filters?.colorSlugs?.length;
 
-  // Brand filter
-  if (filters?.brandSlugs?.length) {
-    const brandSubquery = db
-      .select({ id: brands.id })
-      .from(brands)
-      .where(inArray(brands.slug, filters.brandSlugs));
-    conds.push(inArray(products.brandId, brandSubquery));
-  }
-
-  // Category filter
-  if (filters?.categorySlugs?.length) {
-    const categorySubquery = db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(inArray(categories.slug, filters.categorySlugs));
-    conds.push(inArray(products.categoryId, categorySubquery));
-  }
-
-  const hasSize = (filters?.sizeSlugs?.length ?? 0) > 0;
-  const hasColor = (filters?.colorSlugs?.length ?? 0) > 0;
+  // Check if we need variant filtering
+  const needsVariantFilter = hasSizeFilter || hasColorFilter;
   const hasPrice = !!(filters?.priceMin !== undefined || filters?.priceMax !== undefined || filters?.priceRanges?.length);
 
-  // Build variant conditions (size, color)
+  // Build variant conditions for size/color filtering
   const variantConds: SQL[] = [];
-
-  // Size filter
-  if (hasSize) {
-    const sizeSubquery = db
-      .select({ id: sizes.id })
-      .from(sizes)
-      .where(inArray(sizes.slug, filters.sizeSlugs!));
-    variantConds.push(inArray(productVariants.sizeId, sizeSubquery));
+  if (needsVariantFilter) {
+    if (hasSizeFilter) {
+      variantConds.push(inArray(productVariants.sizeId,
+        db.select({ id: sizes.id }).from(sizes).where(inArray(sizes.slug, filters.sizeSlugs!))
+      ));
+    }
+    if (hasColorFilter) {
+      variantConds.push(inArray(productVariants.colorId,
+        db.select({ id: colors.id }).from(colors).where(inArray(colors.slug, filters.colorSlugs!))
+      ));
+    }
   }
 
-  // Color filter
-  if (hasColor) {
-    const colorSubquery = db
-      .select({ id: colors.id })
-      .from(colors)
-      .where(inArray(colors.slug, filters.colorSlugs!));
-    variantConds.push(inArray(productVariants.colorId, colorSubquery));
-  }
-
-  // Create variant subquery that ONLY includes matching variants
+  // Variant join (only when needed for filtering)
   const variantJoin = db
     .select({
       variantId: productVariants.id,
@@ -127,7 +114,7 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
       for (const [min, max] of filters.priceRanges) {
         const rangeConditions: SQL[] = [];
 
-        // For simple products: check product's price
+        // Simple products
         const simpleCondition: SQL[] = [eq(products.productType, 'simple')];
         if (min !== undefined)
           simpleCondition.push(sql`COALESCE(${products.salePrice}::numeric, ${products.price}::numeric) >= ${min}`);
@@ -135,7 +122,7 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
           simpleCondition.push(sql`COALESCE(${products.salePrice}::numeric, ${products.price}::numeric) <= ${max}`);
         rangeConditions.push(and(...simpleCondition)!);
 
-        // For configurable products: check variant prices
+        // Configurable products
         const configurableCondition: SQL[] = [
           eq(products.productType, 'configurable'),
           sql`${variantJoin.variantId} IS NOT NULL`
@@ -175,10 +162,6 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
     }
   }
 
-  // Determine if we need variant filtering
-  // IMPORTANT: Color/Size filters should ONLY apply to configurable products
-  const needsStrictVariantFilter = hasSize || hasColor; // Excludes simple products
-
   // Images join
   const imagesJoin = db
     .select({
@@ -186,7 +169,7 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
       url: productImages.url,
       rn: sql<number>`row_number() over (
         partition by ${productImages.productId}
-        order by 
+        order by
           case when ${productImages.variantId} is null then 0 else 1 end asc,
           ${productImages.isPrimary} desc,
           ${productImages.sortOrder} asc,
@@ -207,37 +190,13 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
     .groupBy(reviews.productId)
     .as("r");
 
-  // Build WHERE clause
-  const baseWhere = conds.length ? and(...conds) : undefined;
-
-  // ===== FIXED: Use MIN_BY equivalent (DISTINCT ON or FIRST_VALUE) =====
-  // Get the price and salePrice from the variant with the lowest effective price
-  const minPriceAgg = sql<number | null>`
-    CASE 
-      WHEN ${products.productType} = 'simple' THEN ${products.price}::numeric
-      ELSE MIN(${variantJoin.price}) FILTER (
-        WHERE ${variantJoin.effectivePrice} = MIN(${variantJoin.effectivePrice}) OVER ()
-      )
-    END
-  `;
-
-  const minSalePriceAgg = sql<number | null>`
-    CASE 
-      WHEN ${products.productType} = 'simple' THEN ${products.salePrice}::numeric
-      ELSE MIN(${variantJoin.salePrice}) FILTER (
-        WHERE ${variantJoin.effectivePrice} = MIN(${variantJoin.effectivePrice}) OVER ()
-      )
-    END
-  `;
-
-  // Actually, let me use a simpler approach with FIRST_VALUE
-  // This gets the price from the cheapest variant (by effective price)
+  // ===== SIMPLIFIED: Price aggregations with simpler logic =====
   const cheapestVariantPrice = sql<number | null>`
-    CASE 
+    CASE
       WHEN ${products.productType} = 'simple' THEN ${products.price}::numeric
       ELSE (
         ARRAY_AGG(
-          ${variantJoin.price} 
+          ${variantJoin.price}
           ORDER BY ${variantJoin.effectivePrice} ASC, ${variantJoin.variantId} ASC
         ) FILTER (WHERE ${variantJoin.variantId} IS NOT NULL)
       )[1]
@@ -245,11 +204,11 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
   `;
 
   const cheapestVariantSalePrice = sql<number | null>`
-    CASE 
+    CASE
       WHEN ${products.productType} = 'simple' THEN ${products.salePrice}::numeric
       ELSE (
         ARRAY_AGG(
-          ${variantJoin.salePrice} 
+          ${variantJoin.salePrice}
           ORDER BY ${variantJoin.effectivePrice} ASC, ${variantJoin.variantId} ASC
         ) FILTER (WHERE ${variantJoin.variantId} IS NOT NULL)
       )[1]
@@ -257,19 +216,19 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
   `;
 
   const maxDiscountAgg = sql<number | null>`
-    CASE 
+    CASE
       WHEN ${products.productType} = 'simple' THEN
-        CASE 
+        CASE
           WHEN ${products.salePrice} IS NOT NULL AND ${products.price}::numeric > 0
           THEN round((1 - ${products.salePrice}::numeric / ${products.price}::numeric) * 100)
-          ELSE NULL 
+          ELSE NULL
         END
       ELSE
         max(
-          CASE 
+          CASE
             WHEN ${variantJoin.salePrice} IS NOT NULL AND ${variantJoin.price} > 0
             THEN round((1 - ${variantJoin.salePrice} / ${variantJoin.price}) * 100)
-            ELSE NULL 
+            ELSE NULL
           END
         )
     END
@@ -279,7 +238,7 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
   const hoverImageAgg = sql<string | null>`min(case when ${imagesJoin.rn} = 2 then ${imagesJoin.url} else null end)`;
 
   const effectivePriceAgg = sql`
-    CASE 
+    CASE
       WHEN ${products.productType} = 'simple' THEN
         COALESCE(${products.salePrice}::numeric, ${products.price}::numeric)
       ELSE
@@ -303,9 +262,9 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
   const limit = Math.max(1, Math.min(filters?.limit ?? 24, 60));
   const offset = (page - 1) * limit;
 
-  // Build the query
+  // Build the query with optimized joins
   const buildQuery = () => {
-    const baseQuery = db
+    let query = db
       .select({
         id: products.id,
         slug: products.slug,
@@ -322,18 +281,36 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
       })
       .from(products);
 
-    // Apply variant join
-    const withJoins = baseQuery.leftJoin(variantJoin, eq(variantJoin.productId, products.id));
+    // ===== SIMPLIFIED: Conditional joins based on filters (industry best practice) =====
+    // Only join tables that are actually needed for filtering
+    if (hasGenderFilter) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = query.innerJoin(genders, eq(products.genderId, genders.id)) as any; // Drizzle ORM type limitation
+      conds.push(inArray(genders.slug, filters.genderSlugs!));
+    }
 
-    // Combine all WHERE conditions
-    const allConditions: SQL[] = [];
-    
-    // Base conditions (published, search, gender, brand, category)
-    if (baseWhere) allConditions.push(baseWhere);
-    
-    // ===== FIXED: Different logic for color/size vs price filters =====
-    if (needsStrictVariantFilter) {
-      // For color/size filters: ONLY configurable products WITH matching variants
+    if (hasBrandFilter) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = query.innerJoin(brands, eq(products.brandId, brands.id)) as any; // Drizzle ORM type limitation
+      conds.push(inArray(brands.slug, filters.brandSlugs!));
+    }
+
+    if (hasCategoryFilter) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = query.innerJoin(categories, eq(products.categoryId, categories.id)) as any; // Drizzle ORM type limitation
+      conds.push(inArray(categories.slug, filters.categorySlugs!));
+    }
+
+    // Variant join (for size/color/price filtering)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query = query.leftJoin(variantJoin, eq(variantJoin.productId, products.id)) as any; // Drizzle ORM type limitation
+
+    // ===== SIMPLIFIED: Cleaner WHERE conditions =====
+    const allConditions: SQL[] = [...conds];
+
+    // Variant filter logic
+    if (needsVariantFilter) {
+      // Size/color filters only apply to configurable products with matching variants
       allConditions.push(
         and(
           eq(products.productType, 'configurable'),
@@ -341,7 +318,7 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
         )!
       );
     } else if (hasPrice) {
-      // For price filters: Include simple products OR configurable with variants
+      // Price filters include both simple and configurable products
       allConditions.push(
         or(
           eq(products.productType, 'simple'),
@@ -349,13 +326,12 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
         )!
       );
     }
-    
-    // Price conditions (if any)
+
     if (priceConditions.length > 0) {
       allConditions.push(or(...priceConditions)!);
     }
 
-    return withJoins
+    return query
       .leftJoin(imagesJoin, eq(imagesJoin.productId, products.id))
       .leftJoin(reviewsJoin, eq(reviewsJoin.productId, products.id))
       .where(allConditions.length > 0 ? and(...allConditions) : undefined)
@@ -378,18 +354,32 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
 
   // Count query with same filtering logic
   const countQuery = () => {
-    const baseQuery = db
+    let query = db
       .select({ cnt: count(sql`distinct ${products.id}`) })
       .from(products);
 
-    const withJoins = baseQuery.leftJoin(variantJoin, eq(variantJoin.productId, products.id));
+    // Apply same conditional joins
+    if (hasGenderFilter) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = query.innerJoin(genders, eq(products.genderId, genders.id)) as any; // Drizzle ORM type limitation
+    }
 
-    const allConditions: SQL[] = [];
-    if (baseWhere) allConditions.push(baseWhere);
-    
-    // ===== FIXED: Same logic as main query =====
-    if (needsStrictVariantFilter) {
-      // For color/size filters: ONLY configurable products WITH matching variants
+    if (hasBrandFilter) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = query.innerJoin(brands, eq(products.brandId, brands.id)) as any; // Drizzle ORM type limitation
+    }
+
+    if (hasCategoryFilter) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = query.innerJoin(categories, eq(products.categoryId, categories.id)) as any; // Drizzle ORM type limitation
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query = query.leftJoin(variantJoin, eq(variantJoin.productId, products.id)) as any; // Drizzle ORM type limitation
+
+    const allConditions: SQL[] = [...conds];
+
+    if (needsVariantFilter) {
       allConditions.push(
         and(
           eq(products.productType, 'configurable'),
@@ -397,7 +387,6 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
         )!
       );
     } else if (hasPrice) {
-      // For price filters: Include simple products OR configurable with variants
       allConditions.push(
         or(
           eq(products.productType, 'simple'),
@@ -405,12 +394,12 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
         )!
       );
     }
-    
+
     if (priceConditions.length > 0) {
       allConditions.push(or(...priceConditions)!);
     }
 
-    return withJoins.where(allConditions.length > 0 ? and(...allConditions) : undefined);
+    return query.where(allConditions.length > 0 ? and(...allConditions) : undefined);
   };
 
   const countRows = await countQuery();
@@ -430,11 +419,13 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
     reviewCount: Number(r.reviewCount),
   }));
 
-  const totalCount = countRows[0]?.cnt ?? 0;
-
-  return { products: productsOut, totalCount };
+  return {
+    products: productsOut,
+    totalCount: countRows[0]?.cnt ?? 0,
+  };
 }
 
+// Keep remaining functions unchanged (getProductBySlug, etc.)
 export async function fetchMoreProducts(
   filters: NormalizedProductFilters,
   nextPage: number
