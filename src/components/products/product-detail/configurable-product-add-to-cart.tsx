@@ -1,3 +1,4 @@
+// src/components/products/product-detail/configurable-product-add-to-cart.tsx
 'use client';
 
 import { useState } from 'react';

@@ -2,14 +2,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Loader2 } from "lucide-react";
-import { searchProducts, getProductById } from "@/lib/actions/hero-slides-search";
+import { Badge } from "@/components/ui/badge";
+import { Plus, X, Loader2, Package, Info } from "lucide-react";
+import { searchProducts, getProductById } from "@/lib/actions/admin-search";
 import {
     addProductsToCollection,
     removeProductFromCollection,
-    getCollectionProductsById, // ✅ NEW: Import the function
+    getCollectionProductsById,
 } from "@/lib/actions/collections";
 import { toast } from "sonner";
 import { SearchableCombobox } from "../hero-slides/searchable-combobox";
@@ -19,7 +20,6 @@ interface ManualProductSelectorProps {
     mode: "create" | "edit";
 }
 
-// ✅ FIXED: Define proper type for products
 interface CollectionProduct {
     id: string;
     name: string;
@@ -30,20 +30,17 @@ const ManualProductSelector: React.FC<ManualProductSelectorProps> = ({
     collectionId,
     mode,
 }) => {
-    // ✅ FIXED: Properly typed state with explicit type annotation
     const [selectedProducts, setSelectedProducts] = useState<CollectionProduct[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isAddingProduct, setIsAddingProduct] = useState(false);
 
-    // Load existing products if in edit mode
     useEffect(() => {
         if (mode === "edit" && collectionId) {
             loadCollectionProducts();
         }
     }, [mode, collectionId]);
 
-    // ✅ FIXED: Implement the loadCollectionProducts function
     const loadCollectionProducts = async () => {
         if (!collectionId) return;
 
@@ -51,7 +48,6 @@ const ManualProductSelector: React.FC<ManualProductSelectorProps> = ({
         try {
             const result = await getCollectionProductsById(collectionId);
             if (result.success && result.data) {
-                // ✅ FIXED: Explicitly typed products array
                 const products: CollectionProduct[] = result.data.map((p) => ({
                     id: p.id,
                     name: p.name,
@@ -82,7 +78,6 @@ const ManualProductSelector: React.FC<ManualProductSelectorProps> = ({
         try {
             const product = await getProductById(selectedProductId);
             if (product) {
-                // ✅ FIXED: Properly typed product object
                 const newProduct: CollectionProduct = {
                     id: product.id,
                     name: product.name,
@@ -97,9 +92,18 @@ const ManualProductSelector: React.FC<ManualProductSelectorProps> = ({
                         selectedProductId,
                     ]);
                     if (result.success) {
-                        toast.success("Product added to collection");
+                        const { added, skipped } = result.data || { added: 0, skipped: 0 };
+                        if (skipped > 0) {
+                            toast.info("This product is already in the collection");
+                            // Revert optimistic update since it was a duplicate
+                            setSelectedProducts((prev) =>
+                                prev.filter((p) => p.id !== selectedProductId)
+                            );
+                        } else {
+                            toast.success("Product added to collection");
+                        }
                     } else {
-                        toast.error("Failed to add product");
+                        toast.error(result.error || "Failed to add product");
                         // Revert
                         setSelectedProducts((prev) =>
                             prev.filter((p) => p.id !== selectedProductId)
@@ -141,15 +145,24 @@ const ManualProductSelector: React.FC<ManualProductSelectorProps> = ({
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Collection Products</CardTitle>
+                <CardTitle>Manage Products</CardTitle>
+                <CardDescription>
+                    Add products to your collection one at a time
+                </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 {mode === "create" && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                        <p className="text-sm text-yellow-800">
-                            <strong>Note:</strong> You can add products to this collection after
-                            creating it. Save the collection first, then come back to add products.
-                        </p>
+                    <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-900 mb-1">
+                                Save Collection First
+                            </p>
+                            <p className="text-sm text-blue-700">
+                                You can add products after creating this collection. Click &quot;Create Collection&quot; below,
+                                then return to this page to start adding products.
+                            </p>
+                        </div>
                     </div>
                 )}
 
@@ -202,22 +215,33 @@ const ManualProductSelector: React.FC<ManualProductSelectorProps> = ({
                         </div>
 
                         {isLoading ? (
-                            <div className="flex items-center justify-center py-8">
+                            <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                             </div>
                         ) : selectedProducts.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <p>No products added to this collection yet.</p>
-                                <p className="text-sm mt-1">
-                                    Use the search above to add products.
+                            <div className="text-center py-12 border rounded-lg bg-muted/10">
+                                <div className="flex justify-center mb-4">
+                                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                                        <Package className="h-6 w-6 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <h3 className="text-sm font-medium mb-1">
+                                    No products in this collection
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Search for a product above and click &quot;Add&quot; to get started
                                 </p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                <p className="text-sm text-muted-foreground">
-                                    {selectedProducts.length} product{selectedProducts.length !== 1 ? "s" : ""} in
-                                    collection
-                                </p>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium">
+                                        Products in Collection
+                                    </p>
+                                    <Badge variant="secondary">
+                                        {selectedProducts.length} {selectedProducts.length !== 1 ? "items" : "item"}
+                                    </Badge>
+                                </div>
                                 <div className="border rounded-lg divide-y">
                                     {selectedProducts.map((product) => (
                                         <div

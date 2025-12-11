@@ -40,7 +40,7 @@ const profileTabs = [
         label: 'Saved Items',
         icon: Heart,
         href: '/profile/wishlist',
-        description: 'Your favorite fragrances'
+        description: 'Your favorite products'
     },
 ];
 

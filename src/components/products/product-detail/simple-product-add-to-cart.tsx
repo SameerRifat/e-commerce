@@ -2,11 +2,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingBag, AlertCircle, Check, Package, Ruler } from 'lucide-react';
+import { ShoppingBag, AlertCircle, Check} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
 

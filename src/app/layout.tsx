@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import NextTopLoader from 'nextjs-toploader';
+import OAuthCallbackHandler from "@/components/auth/oauth-callback-handler";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -12,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Nike",
-  description: "An e-commerce platform for Nike shoes",
+  title: "Cosmeticspk",
+  description: "Discover Your Natural Glow, Join thousands of beauty enthusiasts who trust us for premium skincare, cosmetics, and personalized beauty solutions.",
 };
 
 export default function RootShell({
@@ -33,6 +34,7 @@ export default function RootShell({
           showSpinner={false}
           easing="ease"
         />
+        <OAuthCallbackHandler />
         {children}
         <Toaster position="top-right" richColors />
       </body>

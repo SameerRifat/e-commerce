@@ -1,17 +1,5 @@
 // src/lib/actions/product.ts (Optimized version)
-/**
- * E-commerce Product Filtering - Optimized Queries
- *
- * Industry Pattern: Direct JOINs instead of subqueries for better performance
- * - Uses indexes on join columns (WooCommerce pattern)
- * - Filters before joining when possible (Query optimization best practice)
- * - Simplified WHERE conditions for better query planner usage
- *
- * References:
- * - https://whitelabelcoders.com/blog/what-is-database-query-optimization-and-why-is-it-important-to-scale-my-woocommerce-store/
- * - https://www.acceldata.io/blog/query-optimization-in-sql-essential-techniques-tools-and-best-practices
- * - https://developer.woocommerce.com/2022/02/02/new-product-filtering-by-attributes-rolling-out-in-woocommerce-6-3/
- */
+
 "use server";
 
 import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
@@ -26,6 +14,7 @@ import {
   sizes,
   colors,
   reviews,
+  users,
   type SelectProduct,
   type SelectProductImage,
   type SelectBrand,

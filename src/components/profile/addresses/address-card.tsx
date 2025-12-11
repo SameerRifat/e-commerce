@@ -173,13 +173,11 @@ export const AddressCard = ({
                     </div>
                 </div>
 
-                {/* Phone Number */}
-                {address.phone && (
-                    <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <p className="text-xs sm:text-sm md:text-base">{address.phone}</p>
-                    </div>
-                )}
+                {/* Phone Number - NOW ALWAYS PRESENT */}
+                <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-xs sm:text-sm md:text-base">{address.phone}</p>
+                </div>
 
                 {/* Loading Overlay for visual feedback */}
                 {isDeleting && (

@@ -12,6 +12,7 @@ import { products } from "@/lib/db/schema/products";
 import { collections } from "@/lib/db/schema/collections";
 import { eq, asc, and, or, lte, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { deleteUploadThingFiles, isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 export type ActionResult<T = unknown> = {
     success: boolean;
@@ -379,6 +380,23 @@ export async function updateHeroSlide(
             }
         }
 
+        // Track media files to delete
+        const mediaToDelete: string[] = [];
+
+        // Check if desktop media is being replaced
+        if (data.desktopMediaUrl !== undefined && existingSlide.desktopMediaUrl && existingSlide.desktopMediaUrl !== data.desktopMediaUrl) {
+            if (isUploadThingUrl(existingSlide.desktopMediaUrl)) {
+                mediaToDelete.push(existingSlide.desktopMediaUrl);
+            }
+        }
+
+        // Check if mobile media is being replaced
+        if (data.mobileMediaUrl !== undefined && existingSlide.mobileMediaUrl && existingSlide.mobileMediaUrl !== data.mobileMediaUrl) {
+            if (isUploadThingUrl(existingSlide.mobileMediaUrl)) {
+                mediaToDelete.push(existingSlide.mobileMediaUrl);
+            }
+        }
+
         // Update slide
         await db
             .update(heroSlides)
@@ -387,6 +405,14 @@ export async function updateHeroSlide(
                 updatedAt: new Date(),
             })
             .where(eq(heroSlides.id, id));
+
+        // Clean up old media from UploadThing after successful update
+        if (mediaToDelete.length > 0) {
+            deleteUploadThingFiles(mediaToDelete).catch(error => {
+                console.error('[CLEANUP] Failed to delete old hero slide media:', error);
+            });
+            console.log(`[CLEANUP] Scheduled deletion of ${mediaToDelete.length} old hero slide media files`);
+        }
 
         revalidatePath('/');
         revalidatePath('/dashboard/hero-slides');
@@ -409,6 +435,23 @@ export async function updateHeroSlide(
 // ============================================
 export async function deleteHeroSlide(id: string): Promise<ActionResult> {
     try {
+        // Get slide data before deletion for cleanup
+        const [slide] = await db
+            .select({
+                desktopMediaUrl: heroSlides.desktopMediaUrl,
+                mobileMediaUrl: heroSlides.mobileMediaUrl,
+            })
+            .from(heroSlides)
+            .where(eq(heroSlides.id, id))
+            .limit(1);
+
+        if (!slide) {
+            return {
+                success: false,
+                error: "Hero slide not found",
+            };
+        }
+
         const [deletedSlide] = await db
             .delete(heroSlides)
             .where(eq(heroSlides.id, id))
@@ -419,6 +462,22 @@ export async function deleteHeroSlide(id: string): Promise<ActionResult> {
                 success: false,
                 error: "Hero slide not found",
             };
+        }
+
+        // Clean up media from UploadThing after successful deletion
+        const mediaToDelete: string[] = [];
+        if (slide.desktopMediaUrl && isUploadThingUrl(slide.desktopMediaUrl)) {
+            mediaToDelete.push(slide.desktopMediaUrl);
+        }
+        if (slide.mobileMediaUrl && isUploadThingUrl(slide.mobileMediaUrl)) {
+            mediaToDelete.push(slide.mobileMediaUrl);
+        }
+
+        if (mediaToDelete.length > 0) {
+            deleteUploadThingFiles(mediaToDelete).catch(error => {
+                console.error('[CLEANUP] Failed to delete hero slide media:', error);
+            });
+            console.log(`[CLEANUP] Scheduled deletion of ${mediaToDelete.length} hero slide media files`);
         }
 
         revalidatePath('/');

@@ -41,13 +41,25 @@ import {
     Layers,
     Plus,
     Loader2,
+    Copy,
 } from "lucide-react";
 import {
     deleteCollection,
     toggleCollectionPublish,
     reorderCollections,
+    duplicateCollection,
     type CollectionWithMeta,
 } from "@/lib/actions/collections";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
     DndContext,
@@ -76,9 +88,10 @@ const SortableRow: React.FC<{
     collection: CollectionWithMeta;
     onEdit: () => void;
     onDelete: () => void;
+    onDuplicate: () => void;
     onTogglePublish: () => void;
     isTogglingPublish: boolean;
-}> = ({ collection, onEdit, onDelete, onTogglePublish, isTogglingPublish }) => {
+}> = ({ collection, onEdit, onDelete, onDuplicate, onTogglePublish, isTogglingPublish }) => {
     const {
         attributes,
         listeners,
@@ -118,21 +131,18 @@ const SortableRow: React.FC<{
                 )}
             </TableCell>
 
-            {/* Name & Type */}
+            {/* Name */}
             <TableCell>
                 <div>
                     <div className="font-medium">{collection.name}</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                            {collection.collectionType}
-                        </Badge>
-                        {collection.isFeatured && (
+                    {collection.isFeatured && (
+                        <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
                             <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                 <Star className="h-3 w-3" />
                                 Featured
                             </Badge>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </TableCell>
 
@@ -168,6 +178,10 @@ const SortableRow: React.FC<{
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={onDuplicate}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Duplicate
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={onTogglePublish}>
                             {collection.isPublished ? (
                                 <>
@@ -202,6 +216,10 @@ const CollectionsTable: React.FC<CollectionsTableProps> = ({ collections: initia
     const [collectionToDelete, setCollectionToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [togglingCollectionId, setTogglingCollectionId] = useState<string | null>(null);
+    const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+    const [collectionToDuplicate, setCollectionToDuplicate] = useState<CollectionWithMeta | null>(null);
+    const [duplicateName, setDuplicateName] = useState("");
+    const [isDuplicating, setIsDuplicating] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -282,6 +300,31 @@ const CollectionsTable: React.FC<CollectionsTableProps> = ({ collections: initia
         setTogglingCollectionId(null);
     };
 
+    const handleDuplicateClick = (collection: CollectionWithMeta) => {
+        setCollectionToDuplicate(collection);
+        setDuplicateName(`${collection.name} (Copy)`);
+        setDuplicateDialogOpen(true);
+    };
+
+    const handleDuplicate = async () => {
+        if (!collectionToDuplicate || !duplicateName.trim()) return;
+
+        setIsDuplicating(true);
+        const result = await duplicateCollection(collectionToDuplicate.id, duplicateName.trim());
+
+        if (result.success) {
+            toast.success("Collection duplicated successfully");
+            setDuplicateDialogOpen(false);
+            setCollectionToDuplicate(null);
+            setDuplicateName("");
+            router.refresh();
+        } else {
+            toast.error(result.error || "Failed to duplicate collection");
+        }
+
+        setIsDuplicating(false);
+    };
+
     if (collections.length === 0) {
         return (
             <Card className="p-12 text-center">
@@ -338,6 +381,7 @@ const CollectionsTable: React.FC<CollectionsTableProps> = ({ collections: initia
                                             setCollectionToDelete(collection.id);
                                             setDeleteDialogOpen(true);
                                         }}
+                                        onDuplicate={() => handleDuplicateClick(collection)}
                                         onTogglePublish={() =>
                                             handleTogglePublish(collection.id, collection.isPublished)
                                         }
@@ -382,6 +426,56 @@ const CollectionsTable: React.FC<CollectionsTableProps> = ({ collections: initia
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Duplicate Collection Dialog */}
+            <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Duplicate Collection</DialogTitle>
+                        <DialogDescription>
+                            Create a copy of &quot;{collectionToDuplicate?.name}&quot; with all its products.
+                            The new collection will be created as a draft.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="duplicate-name">New Collection Name</Label>
+                            <Input
+                                id="duplicate-name"
+                                value={duplicateName}
+                                onChange={(e) => setDuplicateName(e.target.value)}
+                                placeholder="Enter collection name"
+                                disabled={isDuplicating}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDuplicateDialogOpen(false)}
+                            disabled={isDuplicating}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDuplicate}
+                            disabled={!duplicateName.trim() || isDuplicating}
+                        >
+                            {isDuplicating ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Duplicating...
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Duplicate
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

@@ -21,7 +21,7 @@ import {
   type SelectColor,
   type SelectSize,
   type SelectSizeCategory,
-  SelectSizeWithCategory, 
+  SelectSizeWithCategory,
 } from "@/lib/db/schema";
 import {
   completeProductFormSchema,
@@ -30,6 +30,7 @@ import {
 import { eq, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { deleteUploadThingFiles, isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 // Types for server action responses
 export type ActionResult<T = unknown> = {
@@ -626,7 +627,13 @@ export async function updateProduct(
         }
       }
 
-      // Handle images - replace all existing images
+      // Handle images - get existing images before deletion for cleanup
+      const existingImages = await tx
+        .select({ url: productImages.url })
+        .from(productImages)
+        .where(eq(productImages.productId, productId));
+
+      // Delete existing images from database
       await tx.delete(productImages).where(eq(productImages.productId, productId));
 
       if (data.images && data.images.length > 0) {
@@ -655,6 +662,22 @@ export async function updateProduct(
         await tx.insert(productImages).values(imageInserts);
       }
 
+      // Clean up removed images from UploadThing (after successful transaction)
+      if (existingImages.length > 0) {
+        const newImageUrls = new Set(data.images?.map(img => img.url) || []);
+        const imagesToDelete = existingImages
+          .map(img => img.url)
+          .filter(url => url && !newImageUrls.has(url) && isUploadThingUrl(url));
+
+        if (imagesToDelete.length > 0) {
+          // Delete in background, don't wait or fail if cleanup fails
+          deleteUploadThingFiles(imagesToDelete).catch(error => {
+            console.error('[CLEANUP] Failed to delete removed product images:', error);
+          });
+          console.log(`[CLEANUP] Scheduled deletion of ${imagesToDelete.length} removed product images`);
+        }
+      }
+
       return { productId };
     });
 
@@ -679,6 +702,12 @@ export async function updateProduct(
 // Delete product function
 export async function deleteProduct(productId: string): Promise<ActionResult> {
   try {
+    // Get all product images before deletion for cleanup
+    const imagesToCleanup = await db
+      .select({ url: productImages.url })
+      .from(productImages)
+      .where(eq(productImages.productId, productId));
+
     await db.transaction(async (tx) => {
       // Delete related images (cascade will handle this, but being explicit)
       await tx.delete(productImages).where(eq(productImages.productId, productId));
@@ -689,6 +718,21 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
       // Delete the product
       await tx.delete(products).where(eq(products.id, productId));
     });
+
+    // Clean up images from UploadThing after successful deletion
+    if (imagesToCleanup.length > 0) {
+      const imageUrls = imagesToCleanup
+        .map(img => img.url)
+        .filter(url => url && isUploadThingUrl(url));
+
+      if (imageUrls.length > 0) {
+        // Delete in background, don't wait or fail if cleanup fails
+        deleteUploadThingFiles(imageUrls).catch(error => {
+          console.error('[CLEANUP] Failed to delete product images:', error);
+        });
+        console.log(`[CLEANUP] Scheduled deletion of ${imageUrls.length} product images`);
+      }
+    }
 
     // Revalidate relevant paths
     revalidatePath('/dashboard/products');

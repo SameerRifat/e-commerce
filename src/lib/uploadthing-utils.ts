@@ -1,3 +1,4 @@
+// src/lib/uploadthing-utils.ts
 /**
  * Utility functions for managing UploadThing files
  */
@@ -33,86 +34,88 @@ export function isUploadThingUrl(url: string): boolean {
 
 /**
  * Delete a file from UploadThing storage
- * Note: This is a placeholder implementation. 
- * When UploadThing server SDK becomes available, replace this with actual deletion.
+ * Uses the UploadThing server SDK to permanently delete files from storage
+ * NOTE: This function must only be called from server-side code (server actions/API routes)
  */
 export async function deleteUploadThingFile(url: string): Promise<boolean> {
-  "use server";
-  
   try {
     const fileKey = extractFileKeyFromUrl(url);
-    
+
     if (!fileKey) {
-      console.warn('Could not extract file key from URL:', url);
+      console.warn('[UPLOADTHING CLEANUP] Could not extract file key from URL:', url);
       return false;
     }
-    
-    // TODO: Implement actual file deletion when UploadThing server SDK supports it
-    // For now, we'll just log the deletion attempt
-    console.log(`[UPLOADTHING CLEANUP] Would delete file with key: ${fileKey} (URL: ${url})`);
-    
-    // Simulate async operation
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // For now, always return true to indicate "success"
-    // In a real implementation, this would return the actual result
+
+    console.log(`[UPLOADTHING CLEANUP] Attempting to delete file with key: ${fileKey}`);
+
+    // Import and use the UploadThing server SDK
+    const { UTApi } = await import("uploadthing/server");
+    const utapi = new UTApi();
+
+    // Delete the file using the UTApi
+    await utapi.deleteFiles(fileKey);
+
+    console.log(`[UPLOADTHING CLEANUP] Successfully deleted file: ${fileKey}`);
     return true;
-    
-    // Future implementation would look like:
-    // const { UTApi } = await import("uploadthing/server");
-    // const utapi = new UTApi();
-    // const result = await utapi.deleteFiles([fileKey]);
-    // return result.success;
   } catch (error) {
-    console.error('Error deleting UploadThing file:', error);
+    console.error('[UPLOADTHING CLEANUP] Error deleting file:', error);
     return false;
   }
 }
 
 /**
  * Delete multiple files from UploadThing storage
+ * Uses batch deletion for better performance
+ * NOTE: This function must only be called from server-side code (server actions/API routes)
  */
 export async function deleteUploadThingFiles(urls: string[]): Promise<{ success: boolean; deletedCount: number }> {
-  "use server";
-  
   const validUrls = urls.filter(url => url && isUploadThingUrl(url));
-  
+
   if (validUrls.length === 0) {
     return { success: true, deletedCount: 0 };
   }
-  
-  let deletedCount = 0;
-  
-  // Delete files in batches to avoid overwhelming the service
-  const BATCH_SIZE = 10;
-  for (let i = 0; i < validUrls.length; i += BATCH_SIZE) {
-    const batch = validUrls.slice(i, i + BATCH_SIZE);
-    const deletePromises = batch.map(url => deleteUploadThingFile(url));
-    
-    const results = await Promise.allSettled(deletePromises);
-    
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && result.value) {
-        deletedCount++;
-      } else {
-        console.warn(`Failed to delete file: ${batch[index]}`);
-      }
-    });
+
+  // Extract file keys from URLs
+  const fileKeys = validUrls
+    .map(url => extractFileKeyFromUrl(url))
+    .filter((key): key is string => key !== null);
+
+  if (fileKeys.length === 0) {
+    console.warn('[UPLOADTHING CLEANUP] No valid file keys extracted from URLs');
+    return { success: false, deletedCount: 0 };
   }
-  
-  return {
-    success: deletedCount === validUrls.length,
-    deletedCount
-  };
+
+  try {
+    console.log(`[UPLOADTHING CLEANUP] Attempting to delete ${fileKeys.length} files in batch`);
+
+    // Import and use the UploadThing server SDK
+    const { UTApi } = await import("uploadthing/server");
+    const utapi = new UTApi();
+
+    // Delete all files in a single batch operation
+    await utapi.deleteFiles(fileKeys);
+
+    console.log(`[UPLOADTHING CLEANUP] Successfully deleted ${fileKeys.length} files`);
+
+    return {
+      success: true,
+      deletedCount: fileKeys.length
+    };
+  } catch (error) {
+    console.error('[UPLOADTHING CLEANUP] Error deleting files in batch:', error);
+    return {
+      success: false,
+      deletedCount: 0
+    };
+  }
 }
 
 /**
  * Clean up orphaned files (placeholder for future implementation)
  * This would be used in a background job to clean up files that are no longer referenced
+ * NOTE: This function must only be called from server-side code (server actions/API routes)
  */
 export async function cleanupOrphanedFiles(): Promise<void> {
-  "use server";
-  
   // TODO: Implement orphaned file cleanup
   // This would involve:
   // 1. Getting all file URLs from UploadThing

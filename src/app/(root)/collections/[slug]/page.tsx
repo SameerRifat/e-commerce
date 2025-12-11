@@ -1,14 +1,19 @@
-// src/app/(root)/collections/[slug]/page.tsx 
+// src/app/(root)/collections/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Metadata } from "next";
-import { getCollectionBySlug, getCollectionProducts } from "@/lib/actions/collections";
+import { getCollectionBySlug } from "@/lib/actions/collections";
+import { getCollectionProductsWithFilters } from "@/lib/actions/collections-filtered";
+import { getCollectionFilterOptions } from "@/lib/actions/collection-filter-options";
 import { CollectionProductGrid } from "@/components/collections/collection-product-grid";
+import { parseFilterParams } from "@/lib/utils/query";
+import Filters from "@/components/Filters";
+import FilterBadges from "@/components/products/filter-badges";
 import Sort from "@/components/Sort";
 
 interface CollectionPageProps {
     params: Promise<{ slug: string }>;
-    searchParams: Promise<{ page?: string; sort?: string }>;
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({
@@ -23,13 +28,26 @@ export async function generateMetadata({
         };
     }
 
+    // SEO best practices: Complete metadata for search engines and social sharing
+    // Industry standard: Shopify, WooCommerce all include Twitter cards
+    const title = collection.metaTitle || collection.name;
+    const description = collection.metaDescription || collection.description || undefined;
+    const images = collection.imageUrl ? [collection.imageUrl] : undefined;
+
     return {
-        title: collection.metaTitle || collection.name,
-        description: collection.metaDescription || collection.description || undefined,
+        title,
+        description,
         openGraph: {
-            title: collection.metaTitle || collection.name,
-            description: collection.metaDescription || collection.description || undefined,
-            images: collection.imageUrl ? [{ url: collection.imageUrl }] : undefined,
+            title,
+            description,
+            images: images ? [{ url: images[0] }] : undefined,
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images,
         },
     };
 }
@@ -38,48 +56,27 @@ export default async function CollectionPage({ params, searchParams }: Collectio
     const { slug } = await params;
     const sp = await searchParams;
 
-    // Parse query params
-    const page = Math.max(1, Number(sp.page) || 1);
-    const sort = (sp.sort === 'price_asc' || sp.sort === 'price_desc' || sp.sort === 'newest' || sp.sort === 'featured')
-        ? sp.sort
-        : 'featured';
+    // Parse filter parameters
+    const parsed = parseFilterParams(sp);
 
-    // Fetch collection data with products
-    const data = await getCollectionProducts(slug, page, 24, sort);
+    // Fetch collection data with filtered products
+    const data = await getCollectionProductsWithFilters(slug, parsed);
 
     if (!data) {
         notFound();
     }
 
-    const { collection, products, totalCount, hasMore } = data;
+    const { collection, products, totalCount, hasMore, page } = data;
 
-    console.log('collection: ', JSON.stringify(collection, null, 2))
-
-    // collection:  {
-    //     "id": "2d056f12-c4b6-43c9-8a2a-6c504ab42c9a",
-    //     "name": "Summer Collection 2025",
-    //     "slug": "summer-collection-2025",
-    //     "description": "",
-    //     "imageUrl": "https://utfs.io/f/EG7XU6JuLb6T91INarwzDftnu0U7FRCJoP45YA1dOTQrXijy",
-    //     "thumbnailUrl": "https://utfs.io/f/EG7XU6JuLb6TFgD0npBRzTiBJhsyG6Y1M3NcAEfZSl0k8Kax",
-    //     "isPublished": true,
-    //     "isFeatured": true,
-    //     "displayOrder": 0,
-    //     "collectionType": "manual",
-    //     "automationRules": null,
-    //     "metaTitle": "",
-    //     "metaDescription": "",
-    //     "publishedAt": null,
-    //     "expiresAt": null,
-    //     "createdAt": "2025-10-23T09:03:09.831Z",
-    //     "updatedAt": "2025-10-23T09:06:09.201Z"
-    //   }
+    // Fetch filter options for this collection
+    const filterOptions = await getCollectionFilterOptions(slug);
 
     return (
-        <main className="custom_container py-10">
+        <main className="custom_container pb-10">
             {/* Hero Section (if image exists) */}
+            {/* image dimensions: 2048/768 */}
             {collection.imageUrl && (
-                <section className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden mb-10">
+                <section className="relative aspect-[2048/768] max-h-[calc(100vh - 100px)] overflow-hidden mb-10">
                     <Image
                         src={collection.imageUrl}
                         alt={collection.name}
@@ -87,7 +84,7 @@ export default async function CollectionPage({ params, searchParams }: Collectio
                         priority
                         className="object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    {/* <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <div className="text-center text-white max-w-3xl px-4">
                             <h1 className="text-4xl md:text-5xl font-bold mb-4">
                                 {collection.name}
@@ -98,25 +95,25 @@ export default async function CollectionPage({ params, searchParams }: Collectio
                                 </p>
                             )}
                         </div>
-                    </div>
+                    </div> */}
                 </section>
             )}
 
             {/* Header (if no hero image) */}
             {!collection.imageUrl && (
-                <header className="mb-8">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">{collection.name}</h1>
+                <header className="mt-4 sm:mt-6 xl:mt-10">
+                    <h1 className="text-xl sm:text-2xl xl:text-3xl font-semibold">{collection.name}</h1>
                     {collection.description && (
-                        <p className="text-lg text-muted-foreground">
+                        <p className="sm:text-lg text-muted-foreground">
                             {collection.description}
                         </p>
                     )}
                 </header>
             )}
 
-            {/* Products Section */}
+            {/* Products Section with Filters */}
             <section>
-                {products.length === 0 ? (
+                {products.length === 0 && Object.values(parsed).every(v => !v || (Array.isArray(v) && v.length === 0)) ? (
                     <div className="text-center py-16 border rounded-lg">
                         <p className="text-muted-foreground">
                             No products in this collection yet.
@@ -124,23 +121,56 @@ export default async function CollectionPage({ params, searchParams }: Collectio
                     </div>
                 ) : (
                     <>
-                        {/* Sort Bar */}
-                        <div className="flex items-center justify-between mb-6">
-                            <p className="text-sm text-muted-foreground">
-                                Showing {products.length} of {totalCount} products
-                            </p>
-                            <Sort />
+                        {/* Desktop Header */}
+                        <div className="hidden sm:block">
+                            <header className="flex items-center justify-between gap-x-5 gap-y-4 flex-wrap pb-6 mt-4">
+                                <h2 className="text-lg font-medium">
+                                    {totalCount === 0 ? 'No' : totalCount} {totalCount === 1 ? 'Product' : 'Products'}
+                                </h2>
+                                <Sort />
+                            </header>
+                            <FilterBadges />
                         </div>
 
-                        {/* Products Grid with Load More */}
-                        <CollectionProductGrid
-                            initialProducts={products}
-                            totalCount={totalCount}
-                            hasMore={hasMore}
-                            collectionSlug={slug}
-                            currentPage={page}
-                            currentSort={sort}
-                        />
+                        {/* Filter + Products Grid Layout */}
+                        <div className="grid grid-cols-1 gap-2 sm:gap-4 md:gap-6 lg:grid-cols-[250px_1fr] xl:grid-cols-[260px_1fr] 2xl:grid-cols-[270px_1fr]">
+                            {/* Filter Sidebar */}
+                            <div className="flex items-start justify-between gap-4 flex-wrap mt-3 sm:mt-0">
+                                <div className="flex sm:hidden">
+                                    <Sort />
+                                </div>
+                                <Filters filterOptions={filterOptions} />
+                            </div>
+
+                            {/* Mobile Filter Badges */}
+                            <div className="block sm:hidden">
+                                <FilterBadges />
+                            </div>
+
+                            {/* Products Grid */}
+                            <div>
+                                {products.length === 0 ? (
+                                    <div className="text-center py-16 border rounded-lg">
+                                        <p className="text-muted-foreground mb-4">
+                                            No products match your filters.
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Try adjusting your filter criteria.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <CollectionProductGrid
+                                        initialProducts={products}
+                                        totalCount={totalCount}
+                                        hasMore={hasMore}
+                                        collectionSlug={slug}
+                                        currentPage={page}
+                                        currentSort={parsed.sort || 'featured'}
+                                        filters={parsed}
+                                    />
+                                )}
+                            </div>
+                        </div>
                     </>
                 )}
             </section>

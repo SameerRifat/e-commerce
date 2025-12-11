@@ -1,5 +1,9 @@
-// src/lib/actions/hero-slides-search.ts
+// src/lib/actions/admin-search.ts
 "use server";
+
+// Shared search utilities for admin dashboard
+// Used by: hero slides, collections, and other admin features
+// Industry pattern: Centralized search logic (Shopify Admin API, WooCommerce Admin)
 
 import { db } from "@/lib/db";
 import { products } from "@/lib/db/schema/products";

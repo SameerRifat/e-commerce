@@ -37,10 +37,9 @@ export const addressFormSchema = z.object({
     .length(5, 'Postal code must be exactly 5 digits'),
   phone: z
     .string()
-    .or(z.literal(''))
+    .min(1, 'Phone number is required')
     .refine(
       (val) => {
-        if (!val || val.trim() === '') return true;
         const cleaned = val.replace(/[\s-]/g, '');
         return /^(\+92|0)?3\d{9}$/.test(cleaned);
       },
@@ -54,7 +53,6 @@ export const addressFormSchema = z.object({
   isDefault: z.boolean(),
 });
 
-// Rest of the file remains the same...
 export type AddressFormValues = z.infer<typeof addressFormSchema>;
 
 export const insertAddressSchema = addressFormSchema.extend({

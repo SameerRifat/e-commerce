@@ -4,8 +4,10 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, X, Loader2 } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { deleteMediaFile } from "@/lib/actions/media-cleanup";
+import { isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 interface CollectionImageUploadProps {
     value: string;
@@ -33,6 +35,7 @@ const CollectionImageUpload: React.FC<CollectionImageUploadProps> = ({
         if (!files || files.length === 0) return;
 
         const file = files[0];
+        const oldImageUrl = preview;
 
         // Client-side validation
         if (!file.type.startsWith("image/")) {
@@ -59,6 +62,15 @@ const CollectionImageUpload: React.FC<CollectionImageUploadProps> = ({
             if (uploadedFiles && uploadedFiles[0]) {
                 onChange(uploadedFiles[0].url);
                 toast.success("Image uploaded successfully");
+
+                // After successful upload, delete old image from UploadThing (if it exists)
+                if (oldImageUrl && isUploadThingUrl(oldImageUrl)) {
+                    console.log('[CLEANUP] Deleting replaced collection image:', oldImageUrl);
+                    deleteMediaFile(oldImageUrl).catch(error => {
+                        console.error('[CLEANUP] Failed to delete old collection image:', error);
+                        // Don't block the upload on cleanup failure
+                    });
+                }
             }
         } catch (error) {
             console.error("Upload error:", error);
@@ -69,11 +81,29 @@ const CollectionImageUpload: React.FC<CollectionImageUploadProps> = ({
         }
     };
 
-    const handleRemove = () => {
+    const handleRemove = async () => {
+        const urlToDelete = preview;
+
+        // Update UI immediately for better UX
         setPreview("");
         onChange("");
         if (inputRef.current) {
             inputRef.current.value = "";
+        }
+
+        // Delete from UploadThing storage if it's an uploaded file
+        if (urlToDelete && isUploadThingUrl(urlToDelete)) {
+            console.log('[CLEANUP] Deleting removed collection image:', urlToDelete);
+            try {
+                const result = await deleteMediaFile(urlToDelete);
+                if (result.success) {
+                    console.log('[CLEANUP] Successfully deleted removed collection image');
+                } else {
+                    console.error('[CLEANUP] Failed to delete removed collection image:', result.error);
+                }
+            } catch (error) {
+                console.error('[CLEANUP] Error deleting removed collection image:', error);
+            }
         }
     };
 

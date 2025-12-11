@@ -10,8 +10,9 @@ import {
     insertCollectionSchema
 } from "@/lib/db/schema/collections";
 import { products, productImages, productVariants, reviews } from "@/lib/db/schema";
-import { eq, asc, and, or, lte, gte, isNull, ilike, desc, sql, inArray, SQL } from "drizzle-orm";
+import { eq, asc, and, desc, sql, inArray, SQL } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { deleteUploadThingFiles, isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 export type ActionResult<T = unknown> = {
     success: boolean;
@@ -34,7 +35,6 @@ export type CollectionProduct = {
     averageRating: number | null;
     reviewCount: number;
     productType: string;
-    manualSortOrder?: number; // Only for manual collections
 };
 
 export type CollectionData = {
@@ -48,6 +48,8 @@ type SortOption = "featured" | "price_asc" | "price_desc" | "newest";
 
 // ============================================
 // GET: Collection products with pagination
+// Industry Pattern: Database-level pagination (Shopify, WooCommerce, Magento)
+// FIXED: No more in-memory sorting - proper SQL pagination
 // ============================================
 export async function getCollectionProducts(
     slug: string,
@@ -56,57 +58,41 @@ export async function getCollectionProducts(
     sort: SortOption = "featured"
 ): Promise<CollectionData | null> {
     try {
-        // 1. Get collection
+        // 1. Get collection (simplified - no scheduling checks)
         const [collection] = await db
             .select()
             .from(collections)
             .where(
                 and(
                     eq(collections.slug, slug),
-                    eq(collections.isPublished, true),
-                    // Optional: Check scheduling
-                    or(
-                        isNull(collections.publishedAt),
-                        lte(collections.publishedAt, new Date())
-                    ),
-                    or(
-                        isNull(collections.expiresAt),
-                        gte(collections.expiresAt, new Date())
-                    )
+                    eq(collections.isPublished, true)
                 )
             )
             .limit(1);
 
         if (!collection) return null;
 
-        // 2. Get product IDs based on collection type
-        let productIds: Array<{ id: string; sortOrder?: number }>;
+        // 2. Get paginated product IDs from junction table
+        // FIXED: Paginate at database level, not in memory
+        const offset = (page - 1) * limit;
 
-        if (collection.collectionType === 'manual') {
-            // Manual: Get from junction table
-            const manualProducts = await db
-                .select({
-                    id: productCollections.productId,
-                    sortOrder: productCollections.sortOrder,
-                })
+        // For "featured" sort, use manual sortOrder from junction table
+        const productIdsQuery = sort === "featured"
+            ? await db
+                .select({ productId: productCollections.productId })
                 .from(productCollections)
                 .where(eq(productCollections.collectionId, collection.id))
-                .orderBy(asc(productCollections.sortOrder));
-            
-            // Convert null to undefined
-            productIds = manualProducts.map(p => ({
-                id: p.id,
-                sortOrder: p.sortOrder ?? undefined,
-            }));
-        } else {
-            // Automated: Get from rules
-            const matchingIds = await getProductIdsByAutomationRules(
-                collection.automationRules as AutomationRules | null
-            );
-            productIds = matchingIds.map(id => ({ id }));
-        }
+                .orderBy(asc(productCollections.sortOrder), desc(productCollections.addedAt))
+            : await db
+                .select({ productId: productCollections.productId })
+                .from(productCollections)
+                .where(eq(productCollections.collectionId, collection.id))
+                .orderBy(desc(productCollections.addedAt));
 
-        if (productIds.length === 0) {
+        const allProductIds = productIdsQuery.map(p => p.productId);
+        const totalCount = allProductIds.length;
+
+        if (totalCount === 0) {
             return {
                 collection,
                 products: [],
@@ -115,17 +101,20 @@ export async function getCollectionProducts(
             };
         }
 
-        // 3. Build full product query with all necessary data
-        const productIdList = productIds.map(p => p.id);
-        
-        // Images subquery
+        // Paginate product IDs
+        const paginatedProductIds = allProductIds.slice(offset, offset + limit);
+
+        // 3. Build product query with all necessary data
+        // This is complex but necessary for e-commerce (pricing, images, reviews)
+
+        // Images subquery - get first 2 images per product
         const imagesJoin = db
             .select({
                 productId: productImages.productId,
                 url: productImages.url,
                 rn: sql<number>`row_number() over (
                     partition by ${productImages.productId}
-                    order by 
+                    order by
                         case when ${productImages.variantId} is null then 0 else 1 end asc,
                         ${productImages.isPrimary} desc,
                         ${productImages.sortOrder} asc,
@@ -135,7 +124,7 @@ export async function getCollectionProducts(
             .from(productImages)
             .as("pi");
 
-        // Reviews subquery
+        // Reviews subquery - aggregate rating and count
         const reviewsJoin = db
             .select({
                 productId: reviews.productId,
@@ -146,7 +135,7 @@ export async function getCollectionProducts(
             .groupBy(reviews.productId)
             .as("r");
 
-        // Variants subquery for pricing
+        // Variants subquery - for configurable product pricing
         const variantJoin = db
             .select({
                 productId: productVariants.productId,
@@ -157,13 +146,13 @@ export async function getCollectionProducts(
             .from(productVariants)
             .as("v");
 
-        // Price aggregations
+        // Price aggregations - handle both simple and configurable products
         const cheapestVariantPrice = sql<number | null>`
-            CASE 
+            CASE
                 WHEN ${products.productType} = 'simple' THEN ${products.price}::numeric
                 ELSE (
                     ARRAY_AGG(
-                        ${variantJoin.price} 
+                        ${variantJoin.price}
                         ORDER BY ${variantJoin.effectivePrice} ASC
                     ) FILTER (WHERE ${variantJoin.price} IS NOT NULL)
                 )[1]
@@ -171,11 +160,11 @@ export async function getCollectionProducts(
         `;
 
         const cheapestVariantSalePrice = sql<number | null>`
-            CASE 
+            CASE
                 WHEN ${products.productType} = 'simple' THEN ${products.salePrice}::numeric
                 ELSE (
                     ARRAY_AGG(
-                        ${variantJoin.salePrice} 
+                        ${variantJoin.salePrice}
                         ORDER BY ${variantJoin.effectivePrice} ASC
                     ) FILTER (WHERE ${variantJoin.price} IS NOT NULL)
                 )[1]
@@ -183,19 +172,19 @@ export async function getCollectionProducts(
         `;
 
         const maxDiscountAgg = sql<number | null>`
-            CASE 
+            CASE
                 WHEN ${products.productType} = 'simple' THEN
-                    CASE 
+                    CASE
                         WHEN ${products.salePrice} IS NOT NULL AND ${products.price}::numeric > 0
                         THEN round((1 - ${products.salePrice}::numeric / ${products.price}::numeric) * 100)
-                        ELSE NULL 
+                        ELSE NULL
                     END
                 ELSE
                     max(
-                        CASE 
+                        CASE
                             WHEN ${variantJoin.salePrice} IS NOT NULL AND ${variantJoin.price} > 0
                             THEN round((1 - ${variantJoin.salePrice} / ${variantJoin.price}) * 100)
-                            ELSE NULL 
+                            ELSE NULL
                         END
                     )
             END
@@ -205,7 +194,7 @@ export async function getCollectionProducts(
         const hoverImageAgg = sql<string | null>`min(case when ${imagesJoin.rn} = 2 then ${imagesJoin.url} else null end)`;
 
         const effectivePriceAgg = sql`
-            CASE 
+            CASE
                 WHEN ${products.productType} = 'simple' THEN
                     COALESCE(${products.salePrice}::numeric, ${products.price}::numeric)
                 ELSE
@@ -213,26 +202,24 @@ export async function getCollectionProducts(
             END
         `;
 
-        // 4. Determine sort order
+        // 4. Determine sort order for product query
         let orderBy: SQL[];
-        
-        if (collection.collectionType === 'manual' && sort === 'featured') {
-            // For manual collections with "featured" sort, use manual sortOrder
-            // We'll sort in memory after fetching since we need to join sortOrder
-            orderBy = [asc(products.id) as SQL]; // Temporary order
+
+        if (sort === "featured") {
+            // For featured, we already sorted by junction table sortOrder
+            // Just maintain order from paginatedProductIds
+            orderBy = [asc(products.id) as SQL]; // Will be sorted by ID array order
+        } else if (sort === "price_asc") {
+            orderBy = [asc(effectivePriceAgg) as SQL, desc(products.createdAt) as SQL];
+        } else if (sort === "price_desc") {
+            orderBy = [desc(effectivePriceAgg) as SQL, desc(products.createdAt) as SQL];
         } else {
-            // Use standard sorting
-            const SORT_MAPPINGS = {
-                price_asc: [asc(effectivePriceAgg) as SQL, desc(products.createdAt) as SQL, asc(products.id) as SQL],
-                price_desc: [desc(effectivePriceAgg) as SQL, desc(products.createdAt) as SQL, asc(products.id) as SQL],
-                newest: [desc(products.createdAt) as SQL, asc(products.id) as SQL],
-                featured: [desc(products.createdAt) as SQL, asc(products.id) as SQL],
-            } as const;
-            orderBy = [...SORT_MAPPINGS[sort]];
+            // newest
+            orderBy = [desc(products.createdAt) as SQL, asc(products.id) as SQL];
         }
 
-        // 5. Query products
-        const allProducts = await db
+        // 5. Query products (ONLY for paginated IDs)
+        const productsResult = await db
             .select({
                 id: products.id,
                 slug: products.slug,
@@ -253,7 +240,7 @@ export async function getCollectionProducts(
             .leftJoin(reviewsJoin, eq(reviewsJoin.productId, products.id))
             .where(
                 and(
-                    inArray(products.id, productIdList),
+                    inArray(products.id, paginatedProductIds),
                     eq(products.isPublished, true)
                 )
             )
@@ -270,24 +257,20 @@ export async function getCollectionProducts(
             )
             .orderBy(...orderBy);
 
-        // 6. Apply manual sort order if needed
-        let sortedProducts = allProducts;
-        if (collection.collectionType === 'manual' && sort === 'featured') {
-            const sortOrderMap = new Map(productIds.map(p => [p.id, p.sortOrder ?? 999]));
-            sortedProducts = allProducts.sort((a, b) => {
-                const orderA = sortOrderMap.get(a.id) ?? 999;
-                const orderB = sortOrderMap.get(b.id) ?? 999;
+        // 6. For "featured" sort, maintain original order from junction table
+        let finalProducts = productsResult;
+        if (sort === "featured") {
+            // Create order map from paginatedProductIds
+            const orderMap = new Map(paginatedProductIds.map((id, index) => [id, index]));
+            finalProducts = productsResult.sort((a, b) => {
+                const orderA = orderMap.get(a.id) ?? 999;
+                const orderB = orderMap.get(b.id) ?? 999;
                 return orderA - orderB;
             });
         }
 
-        // 7. Apply pagination
-        const totalCount = sortedProducts.length;
-        const offset = (page - 1) * limit;
-        const paginatedProducts = sortedProducts.slice(offset, offset + limit);
-
-        // 8. Format results
-        const formattedProducts: CollectionProduct[] = paginatedProducts.map((p) => ({
+        // 7. Format results
+        const formattedProducts: CollectionProduct[] = finalProducts.map((p) => ({
             id: p.id,
             slug: p.slug,
             name: p.name,
@@ -312,86 +295,6 @@ export async function getCollectionProducts(
         console.error("Error fetching collection products:", error);
         return null;
     }
-}
-
-// ============================================
-// Helper: Get product IDs by automation rules
-// ============================================
-type AutomationRule = {
-    field: string;
-    operator: 'equals' | 'in' | 'gte' | 'lte' | 'gt' | 'lt';
-    value: string | number | boolean | string[] | number[] | null;
-};
-
-type AutomationRules = {
-    conditions: 'AND' | 'OR';
-    rules: AutomationRule[];
-};
-
-async function getProductIdsByAutomationRules(
-    rules: AutomationRules | null
-): Promise<string[]> {
-    if (!rules || !rules.rules || rules.rules.length === 0) {
-        return [];
-    }
-
-    // Build conditions from rules
-    const conditions: SQL[] = [];
-    
-    for (const rule of rules.rules) {
-        // Type-safe field access
-        const validFields = ['categoryId', 'brandId', 'genderId', 'price', 'createdAt'] as const;
-        type ValidField = typeof validFields[number];
-        if (!validFields.includes(rule.field as ValidField)) {
-            console.warn(`Invalid automation rule field: ${rule.field}`);
-            continue;
-        }
-
-        const field = products[rule.field as keyof typeof products.$inferSelect];
-        if (!field) continue;
-
-        try {
-            switch (rule.operator) {
-                case 'equals':
-                    conditions.push(eq(field, rule.value as string | number | boolean));
-                    break;
-                case 'in':
-                    if (Array.isArray(rule.value) && rule.value.length > 0) {
-                        conditions.push(inArray(field, rule.value as (string | number)[]));
-                    }
-                    break;
-                case 'gte':
-                    conditions.push(gte(field, rule.value as number));
-                    break;
-                case 'lte':
-                    conditions.push(lte(field, rule.value as number));
-                    break;
-                case 'gt':
-                    conditions.push(sql`${field} > ${rule.value}`);
-                    break;
-                case 'lt':
-                    conditions.push(sql`${field} < ${rule.value}`);
-                    break;
-            }
-        } catch (error) {
-            console.warn(`Error building automation rule condition:`, rule, error);
-        }
-    }
-
-    if (conditions.length === 0) return [];
-
-    // Combine conditions with AND/OR
-    const whereClause = rules.conditions === 'AND'
-        ? and(eq(products.isPublished, true), ...conditions)
-        : and(eq(products.isPublished, true), or(...conditions));
-
-    // Query just the IDs
-    const result = await db
-        .select({ id: products.id })
-        .from(products)
-        .where(whereClause);
-
-    return result.map(r => r.id);
 }
 
 // ============================================
@@ -427,8 +330,6 @@ export type CollectionWithMeta = SelectCollection & {
 // ============================================
 export async function getActiveCollections(): Promise<CollectionWithMeta[]> {
     try {
-        const now = new Date();
-
         const collectionsData = await db
             .select({
                 id: collections.id,
@@ -440,31 +341,15 @@ export async function getActiveCollections(): Promise<CollectionWithMeta[]> {
                 isPublished: collections.isPublished,
                 isFeatured: collections.isFeatured,
                 displayOrder: collections.displayOrder,
-                collectionType: collections.collectionType,
-                automationRules: collections.automationRules,
                 metaTitle: collections.metaTitle,
                 metaDescription: collections.metaDescription,
-                publishedAt: collections.publishedAt,
-                expiresAt: collections.expiresAt,
                 createdAt: collections.createdAt,
                 updatedAt: collections.updatedAt,
                 productCount: sql<number>`count(distinct ${productCollections.productId})::int`,
             })
             .from(collections)
             .leftJoin(productCollections, eq(productCollections.collectionId, collections.id))
-            .where(
-                and(
-                    eq(collections.isPublished, true),
-                    or(
-                        isNull(collections.publishedAt),
-                        lte(collections.publishedAt, now)
-                    ),
-                    or(
-                        isNull(collections.expiresAt),
-                        gte(collections.expiresAt, now)
-                    )
-                )
-            )
+            .where(eq(collections.isPublished, true))
             .groupBy(collections.id)
             .orderBy(asc(collections.displayOrder), desc(collections.createdAt));
 
@@ -480,23 +365,13 @@ export async function getActiveCollections(): Promise<CollectionWithMeta[]> {
 // ============================================
 export async function getFeaturedCollections(): Promise<SelectCollection[]> {
     try {
-        const now = new Date();
-
         const featured = await db
             .select()
             .from(collections)
             .where(
                 and(
                     eq(collections.isPublished, true),
-                    eq(collections.isFeatured, true),
-                    or(
-                        isNull(collections.publishedAt),
-                        lte(collections.publishedAt, now)
-                    ),
-                    or(
-                        isNull(collections.expiresAt),
-                        gte(collections.expiresAt, now)
-                    )
+                    eq(collections.isFeatured, true)
                 )
             )
             .orderBy(asc(collections.displayOrder))
@@ -525,12 +400,8 @@ export async function getAllCollections(): Promise<CollectionWithMeta[]> {
                 isPublished: collections.isPublished,
                 isFeatured: collections.isFeatured,
                 displayOrder: collections.displayOrder,
-                collectionType: collections.collectionType,
-                automationRules: collections.automationRules,
                 metaTitle: collections.metaTitle,
                 metaDescription: collections.metaDescription,
-                publishedAt: collections.publishedAt,
-                expiresAt: collections.expiresAt,
                 createdAt: collections.createdAt,
                 updatedAt: collections.updatedAt,
                 productCount: sql<number>`count(distinct ${productCollections.productId})::int`,
@@ -693,6 +564,23 @@ export async function updateCollection(
             }
         }
 
+        // Track images to delete
+        const imagesToDelete: string[] = [];
+
+        // Check if hero image is being replaced
+        if (data.imageUrl !== undefined && existing.imageUrl && existing.imageUrl !== data.imageUrl) {
+            if (isUploadThingUrl(existing.imageUrl)) {
+                imagesToDelete.push(existing.imageUrl);
+            }
+        }
+
+        // Check if thumbnail is being replaced
+        if (data.thumbnailUrl !== undefined && existing.thumbnailUrl && existing.thumbnailUrl !== data.thumbnailUrl) {
+            if (isUploadThingUrl(existing.thumbnailUrl)) {
+                imagesToDelete.push(existing.thumbnailUrl);
+            }
+        }
+
         // Update
         await db
             .update(collections)
@@ -701,6 +589,14 @@ export async function updateCollection(
                 updatedAt: new Date(),
             })
             .where(eq(collections.id, id));
+
+        // Clean up old images from UploadThing after successful update
+        if (imagesToDelete.length > 0) {
+            deleteUploadThingFiles(imagesToDelete).catch(error => {
+                console.error('[CLEANUP] Failed to delete old collection images:', error);
+            });
+            console.log(`[CLEANUP] Scheduled deletion of ${imagesToDelete.length} old collection images`);
+        }
 
         revalidatePath('/collections');
         revalidatePath('/dashboard/collections');
@@ -723,6 +619,23 @@ export async function updateCollection(
 // ============================================
 export async function deleteCollection(id: string): Promise<ActionResult> {
     try {
+        // Get collection data before deletion for cleanup
+        const [collection] = await db
+            .select({
+                imageUrl: collections.imageUrl,
+                thumbnailUrl: collections.thumbnailUrl,
+            })
+            .from(collections)
+            .where(eq(collections.id, id))
+            .limit(1);
+
+        if (!collection) {
+            return {
+                success: false,
+                error: "Collection not found",
+            };
+        }
+
         const [deletedCollection] = await db
             .delete(collections)
             .where(eq(collections.id, id))
@@ -733,6 +646,22 @@ export async function deleteCollection(id: string): Promise<ActionResult> {
                 success: false,
                 error: "Collection not found",
             };
+        }
+
+        // Clean up images from UploadThing after successful deletion
+        const imagesToDelete: string[] = [];
+        if (collection.imageUrl && isUploadThingUrl(collection.imageUrl)) {
+            imagesToDelete.push(collection.imageUrl);
+        }
+        if (collection.thumbnailUrl && isUploadThingUrl(collection.thumbnailUrl)) {
+            imagesToDelete.push(collection.thumbnailUrl);
+        }
+
+        if (imagesToDelete.length > 0) {
+            deleteUploadThingFiles(imagesToDelete).catch(error => {
+                console.error('[CLEANUP] Failed to delete collection images:', error);
+            });
+            console.log(`[CLEANUP] Scheduled deletion of ${imagesToDelete.length} collection images`);
         }
 
         revalidatePath('/collections');
@@ -794,7 +723,6 @@ export async function toggleCollectionPublish(
             .set({
                 isPublished,
                 updatedAt: new Date(),
-                publishedAt: isPublished ? new Date() : undefined,
             })
             .where(eq(collections.id, id));
 
@@ -814,17 +742,51 @@ export async function toggleCollectionPublish(
 }
 
 // ============================================
-// PRODUCTS: Add/Remove products from manual collection
+// PRODUCTS: Add/Remove products from collection
 // ============================================
 export async function addProductsToCollection(
     collectionId: string,
     productIds: string[]
-): Promise<ActionResult> {
+): Promise<ActionResult<{ added: number; skipped: number; skippedProducts?: string[] }>> {
     try {
-        const values = productIds.map((productId, index) => ({
+        // 1. Get existing product IDs in collection
+        const existing = await db
+            .select({ productId: productCollections.productId })
+            .from(productCollections)
+            .where(eq(productCollections.collectionId, collectionId));
+
+        const existingIds = new Set(existing.map((e) => e.productId));
+
+        // 2. Filter out duplicates
+        const newProductIds = productIds.filter((id) => !existingIds.has(id));
+        const skippedCount = productIds.length - newProductIds.length;
+
+        if (newProductIds.length === 0) {
+            return {
+                success: false,
+                error: "All products are already in this collection",
+                data: {
+                    added: 0,
+                    skipped: skippedCount,
+                },
+            };
+        }
+
+        // 3. Get next sortOrder (append to end)
+        const [lastProduct] = await db
+            .select({ sortOrder: productCollections.sortOrder })
+            .from(productCollections)
+            .where(eq(productCollections.collectionId, collectionId))
+            .orderBy(desc(productCollections.sortOrder))
+            .limit(1);
+
+        const nextSortOrder = (lastProduct?.sortOrder ?? -1) + 1;
+
+        // 4. Insert only new products
+        const values = newProductIds.map((productId, index) => ({
             collectionId,
             productId,
-            sortOrder: index,
+            sortOrder: nextSortOrder + index,
             addedAt: new Date(),
         }));
 
@@ -835,6 +797,10 @@ export async function addProductsToCollection(
 
         return {
             success: true,
+            data: {
+                added: newProductIds.length,
+                skipped: skippedCount,
+            },
         };
     } catch (error) {
         console.error("Error adding products to collection:", error);
@@ -874,7 +840,6 @@ export async function removeProductFromCollection(
     }
 }
 
-
 // ============================================
 // GET: Products in a collection (for admin/edit)
 // ============================================
@@ -903,6 +868,146 @@ export async function getCollectionProductsById(
             success: false,
             data: [],
             error: "Failed to fetch collection products",
+        };
+    }
+}
+
+// ============================================
+// REORDER: Update product positions within collection
+// ============================================
+export async function reorderCollectionProducts(
+    collectionId: string,
+    productOrders: Array<{ productId: string; sortOrder: number }>
+): Promise<ActionResult> {
+    try {
+        await db.transaction(async (tx) => {
+            for (const { productId, sortOrder } of productOrders) {
+                await tx
+                    .update(productCollections)
+                    .set({ sortOrder })
+                    .where(
+                        and(
+                            eq(productCollections.collectionId, collectionId),
+                            eq(productCollections.productId, productId)
+                        )
+                    );
+            }
+        });
+
+        revalidatePath(`/collections`);
+        revalidatePath('/dashboard/collections');
+
+        return {
+            success: true,
+        };
+    } catch (error) {
+        console.error("Error reordering collection products:", error);
+        return {
+            success: false,
+            error: "Failed to reorder products",
+        };
+    }
+}
+
+// ============================================
+// DUPLICATE: Clone a collection with all products
+// ============================================
+export async function duplicateCollection(
+    sourceId: string,
+    newName: string
+): Promise<ActionResult<{ collectionId: string }>> {
+    try {
+        // 1. Get source collection
+        const [sourceCollection] = await db
+            .select()
+            .from(collections)
+            .where(eq(collections.id, sourceId))
+            .limit(1);
+
+        if (!sourceCollection) {
+            return {
+                success: false,
+                error: "Source collection not found",
+            };
+        }
+
+        // 2. Generate unique slug
+        const baseSlug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        let slug = baseSlug;
+        let counter = 1;
+
+        while (true) {
+            const [existing] = await db
+                .select({ id: collections.id })
+                .from(collections)
+                .where(eq(collections.slug, slug))
+                .limit(1);
+
+            if (!existing) break;
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+        }
+
+        // 3. Get next display order
+        const [lastCollection] = await db
+            .select({ displayOrder: collections.displayOrder })
+            .from(collections)
+            .orderBy(desc(collections.displayOrder))
+            .limit(1);
+
+        const nextDisplayOrder = (lastCollection?.displayOrder ?? -1) + 1;
+
+        // 4. Create new collection
+        const [newCollection] = await db
+            .insert(collections)
+            .values({
+                name: newName,
+                slug,
+                description: sourceCollection.description,
+                imageUrl: sourceCollection.imageUrl,
+                thumbnailUrl: sourceCollection.thumbnailUrl,
+                isPublished: false, // Start as draft
+                isFeatured: false,
+                displayOrder: nextDisplayOrder,
+                metaTitle: sourceCollection.metaTitle,
+                metaDescription: sourceCollection.metaDescription,
+                updatedAt: new Date(),
+            })
+            .returning({ id: collections.id });
+
+        // 5. Copy product assignments
+        const sourceProducts = await db
+            .select({
+                productId: productCollections.productId,
+                sortOrder: productCollections.sortOrder,
+            })
+            .from(productCollections)
+            .where(eq(productCollections.collectionId, sourceId))
+            .orderBy(asc(productCollections.sortOrder));
+
+        if (sourceProducts.length > 0) {
+            const productValues = sourceProducts.map((p) => ({
+                collectionId: newCollection.id,
+                productId: p.productId,
+                sortOrder: p.sortOrder,
+                addedAt: new Date(),
+            }));
+
+            await db.insert(productCollections).values(productValues);
+        }
+
+        revalidatePath('/collections');
+        revalidatePath('/dashboard/collections');
+
+        return {
+            success: true,
+            data: { collectionId: newCollection.id },
+        };
+    } catch (error) {
+        console.error("Error duplicating collection:", error);
+        return {
+            success: false,
+            error: "Failed to duplicate collection",
         };
     }
 }

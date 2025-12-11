@@ -20,13 +20,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/dashboard/page-header";
 import { toast } from "sonner";
@@ -37,8 +30,11 @@ import {
 } from "@/lib/actions/collections";
 import CollectionImageUpload from "./collection-image-upload";
 import ManualProductSelector from "./manual-product-selector";
+import { BulkProductSelector } from "./bulk-product-selector";
+import { CollectionProductsReorder } from "./collection-products-reorder";
 import { CollectionFormData, collectionFormSchema } from "./collection-form-schema";
 import { SelectCollection } from "@/lib/db/schema";
+import { getCollectionProductsById } from "@/lib/actions/collections";
 
 interface CollectionFormProps {
     mode: "create" | "edit";
@@ -54,6 +50,8 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+    const [collectionProducts, setCollectionProducts] = useState<Array<{ id: string; name: string; sku: string | null }>>([]);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
     const { startUpload, isUploading } = useUploadThing("collectionImageUploader", {
         onClientUploadComplete: (res) => {
@@ -76,14 +74,12 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             thumbnailUrl: initialData?.thumbnailUrl || "",
             isPublished: initialData?.isPublished || false,
             isFeatured: initialData?.isFeatured || false,
-            collectionType: (initialData?.collectionType as "manual" | "automated") || "manual",
             metaTitle: initialData?.metaTitle || "",
             metaDescription: initialData?.metaDescription || "",
         },
     });
 
     const watchedName = form.watch("name");
-    const watchedCollectionType = form.watch("collectionType");
 
     // Set slug as manually edited if in edit mode
     useEffect(() => {
@@ -91,6 +87,29 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             setIsSlugManuallyEdited(true);
         }
     }, [mode, initialData]);
+
+    // Load collection products for edit mode
+    useEffect(() => {
+        if (mode === "edit" && collectionId) {
+            loadCollectionProducts();
+        }
+    }, [mode, collectionId]);
+
+    const loadCollectionProducts = async () => {
+        if (!collectionId) return;
+
+        setIsLoadingProducts(true);
+        try {
+            const result = await getCollectionProductsById(collectionId);
+            if (result.success && result.data) {
+                setCollectionProducts(result.data);
+            }
+        } catch (error) {
+            console.error("Error loading products:", error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
 
     // Auto-generate slug from name
     const generateSlug = (name: string): string => {
@@ -183,13 +202,17 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <Tabs defaultValue="basic" className="space-y-6">
-                        <TabsList>
-                            <TabsTrigger value="basic">Basic Information</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-6">
+                            <TabsTrigger value="basic">Basic Info</TabsTrigger>
                             <TabsTrigger value="images">Images</TabsTrigger>
-                            {watchedCollectionType === "manual" && (
-                                <TabsTrigger value="products">Products</TabsTrigger>
-                            )}
-                            <TabsTrigger value="seo">SEO & Publishing</TabsTrigger>
+                            <TabsTrigger value="products">Products</TabsTrigger>
+                            <TabsTrigger value="bulk" disabled={mode === "create"}>
+                                Bulk Add
+                            </TabsTrigger>
+                            <TabsTrigger value="reorder" disabled={mode === "create"}>
+                                Reorder
+                            </TabsTrigger>
+                            <TabsTrigger value="seo">SEO</TabsTrigger>
                         </TabsList>
 
                         {/* Basic Information Tab */}
@@ -268,39 +291,6 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                                                 </FormControl>
                                                 <FormDescription>
                                                     Marketing copy for the collection page
-                                                </FormDescription>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <FormField
-                                        control={form.control}
-                                        name="collectionType"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Collection Type</FormLabel>
-                                                <Select
-                                                    onValueChange={field.onChange}
-                                                    defaultValue={field.value}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="manual">
-                                                            Manual - Hand-pick products
-                                                        </SelectItem>
-                                                        <SelectItem value="automated">
-                                                            Automated - Rule-based (Coming Soon)
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormDescription>
-                                                    Manual collections require selecting products individually.
-                                                    Automated collections use rules to include products.
                                                 </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
@@ -406,15 +396,50 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                             </Card>
                         </TabsContent>
 
-                        {/* Products Tab (Manual Collections Only) */}
-                        {watchedCollectionType === "manual" && (
-                            <TabsContent value="products">
-                                <ManualProductSelector
+                        {/* Products Tab */}
+                        <TabsContent value="products">
+                            <ManualProductSelector
+                                collectionId={collectionId}
+                                mode={mode}
+                            />
+                        </TabsContent>
+
+                        {/* Bulk Add Tab */}
+                        <TabsContent value="bulk">
+                            {mode === "edit" && collectionId ? (
+                                <BulkProductSelector
                                     collectionId={collectionId}
-                                    mode={mode}
+                                    existingProductIds={collectionProducts.map((p) => p.id)}
+                                    onProductsAdded={loadCollectionProducts}
                                 />
-                            </TabsContent>
-                        )}
+                            ) : (
+                                <Card>
+                                    <CardContent className="py-12">
+                                        <p className="text-center text-muted-foreground">
+                                            Save the collection first to use bulk product operations
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </TabsContent>
+
+                        {/* Reorder Tab */}
+                        <TabsContent value="reorder">
+                            {mode === "edit" && collectionId ? (
+                                <CollectionProductsReorder
+                                    collectionId={collectionId}
+                                    initialProducts={collectionProducts}
+                                />
+                            ) : (
+                                <Card>
+                                    <CardContent className="py-12">
+                                        <p className="text-center text-muted-foreground">
+                                            Save the collection first to reorder products
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </TabsContent>
 
                         {/* SEO Tab */}
                         <TabsContent value="seo" className="space-y-6">

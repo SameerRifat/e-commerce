@@ -1,4 +1,7 @@
 // src/components/dashboard/collections/collection-form-schema.ts
+// Simplified form schema aligned with database schema
+// Removed unused fields: collectionType, automationRules, scheduling
+
 import { z } from "zod";
 
 export const collectionFormSchema = z.object({
@@ -15,7 +18,6 @@ export const collectionFormSchema = z.object({
     thumbnailUrl: z.string().url().optional().or(z.literal("")),
     isPublished: z.boolean(),
     isFeatured: z.boolean(),
-    collectionType: z.enum(["manual", "automated"]),
     metaTitle: z.string().max(60).optional(),
     metaDescription: z.string().max(160).optional(),
 });

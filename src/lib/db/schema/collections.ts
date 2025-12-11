@@ -1,5 +1,5 @@
-// src/lib/db/schema/collections.ts (ENHANCED VERSION)
-import { pgTable, text, timestamp, uuid, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
+// src/lib/db/schema/collections.ts
+import { pgTable, text, timestamp, uuid, boolean, integer, index, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 import { products } from './products';
@@ -11,51 +11,42 @@ export const collections = pgTable('collections', {
   description: text('description'),
 
   // Visual assets
-  imageUrl: text('image_url'), // Hero image for collection page
-  thumbnailUrl: text('thumbnail_url'), // Smaller image for cards/grid
+  imageUrl: text('image_url'),
+  thumbnailUrl: text('thumbnail_url'),
 
   // Display & Publishing
   isPublished: boolean('is_published').notNull().default(false),
-  isFeatured: boolean('is_featured').notNull().default(false), // Show in navbar/homepage
+  isFeatured: boolean('is_featured').notNull().default(false),
   displayOrder: integer('display_order').notNull().default(0),
-
-  // Collection type
-  collectionType: text('collection_type').notNull().default('manual'), // 'manual' | 'automated'
-
-  // Automated collection rules (for smart collections)
-  automationRules: jsonb('automation_rules'),
-  /* Example structure:
-  {
-    conditions: 'AND' | 'OR',
-    rules: [
-      { field: 'categoryId', operator: 'equals', value: 'uuid' },
-      { field: 'brandId', operator: 'in', value: ['uuid1', 'uuid2'] },
-      { field: 'price', operator: 'lte', value: 50 },
-      { field: 'createdAt', operator: 'gte', value: '2024-01-01' }
-    ]
-  }
-  */
 
   // SEO
   metaTitle: text('meta_title'),
   metaDescription: text('meta_description'),
 
-  // Scheduling (like hero slides)
-  publishedAt: timestamp('published_at'),
-  expiresAt: timestamp('expires_at'),
-
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // Indexes for performance - critical for production
+  slugIdx: index('idx_collections_slug').on(table.slug),
+  featuredIdx: index('idx_collections_featured').on(table.isFeatured, table.isPublished, table.displayOrder),
+  publishedOrderIdx: index('idx_collections_published_order').on(table.isPublished, table.displayOrder),
+}));
 
 // Product-Collection junction (many-to-many)
+// Standard e-commerce pattern: Shopify's "collects", WooCommerce's term_relationships
 export const productCollections = pgTable('product_collections', {
   id: uuid('id').primaryKey().defaultRandom(),
   productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
   collectionId: uuid('collection_id').references(() => collections.id, { onDelete: 'cascade' }).notNull(),
   sortOrder: integer('sort_order').default(0), // Manual ordering within collection
   addedAt: timestamp('added_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // Indexes for junction table queries
+  collectionSortIdx: index('idx_product_collections_collection_sort').on(table.collectionId, table.sortOrder),
+  productIdx: index('idx_product_collections_product').on(table.productId),
+  // Unique constraint to prevent duplicate product assignments
+  uniqueProductPerCollection: unique('unique_product_per_collection').on(table.collectionId, table.productId),
+}));
 
 // Relations
 export const collectionsRelations = relations(collections, ({ many }) => ({
@@ -73,7 +64,7 @@ export const productCollectionsRelations = relations(productCollections, ({ one 
   }),
 }));
 
-// Zod Schemas
+// Zod Schemas - Simplified
 export const insertCollectionSchema = z.object({
   name: z.string().min(1, "Collection name is required"),
   slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
@@ -82,32 +73,10 @@ export const insertCollectionSchema = z.object({
   thumbnailUrl: z.string().url().optional().nullable(),
   isPublished: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
-  displayOrder: z.number().int().nonnegative().default(0),
-  collectionType: z.enum(['manual', 'automated']).default('manual'),
-  automationRules: z.object({
-    conditions: z.enum(['AND', 'OR']),
-    rules: z.array(z.object({
-      field: z.string(),
-      operator: z.string(),
-      value: z.any(),
-    })),
-  }).optional().nullable(),
+  displayOrder: z.number().int().nonnegative().optional(),
   metaTitle: z.string().max(60).optional().nullable(),
   metaDescription: z.string().max(160).optional().nullable(),
-  publishedAt: z.date().optional().nullable(),
-  expiresAt: z.date().optional().nullable(),
-}).refine(
-  (data) => {
-    if (data.publishedAt && data.expiresAt && data.expiresAt <= data.publishedAt) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: 'Expiration date must be after published date',
-    path: ['expiresAt'],
-  }
-);
+});
 
 export const selectCollectionSchema = z.object({
   id: z.string().uuid(),
@@ -119,12 +88,8 @@ export const selectCollectionSchema = z.object({
   isPublished: z.boolean(),
   isFeatured: z.boolean(),
   displayOrder: z.number(),
-  collectionType: z.string(),
-  automationRules: z.any().nullable(),
   metaTitle: z.string().nullable(),
   metaDescription: z.string().nullable(),
-  publishedAt: z.date().nullable(),
-  expiresAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

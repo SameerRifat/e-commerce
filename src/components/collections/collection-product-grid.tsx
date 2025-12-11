@@ -1,12 +1,13 @@
 // src/components/collections/collection-product-grid.tsx
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/shared/product-card";
 import ProductGrid from "@/components/shared/product-grid";
 import { LoadMoreButton } from "@/components/products/load-more-button";
-import { getCollectionProducts, type CollectionProduct } from "@/lib/actions/collections";
+import { getCollectionProductsWithFilters, type CollectionProduct } from "@/lib/actions/collections-filtered";
+import { parseFilterParams, type NormalizedProductFilters } from "@/lib/utils/query";
 
 interface CollectionProductGridProps {
     initialProducts: CollectionProduct[];
@@ -15,6 +16,7 @@ interface CollectionProductGridProps {
     collectionSlug: string;
     currentPage: number;
     currentSort: "featured" | "price_asc" | "price_desc" | "newest";
+    filters: NormalizedProductFilters;
 }
 
 export function CollectionProductGrid({
@@ -24,16 +26,22 @@ export function CollectionProductGrid({
     collectionSlug,
     currentPage,
     currentSort,
+    filters,
 }: CollectionProductGridProps) {
-    const router = useRouter();
+    const searchParams = useSearchParams();
     const [products, setProducts] = useState<CollectionProduct[]>(initialProducts);
     const [page, setPage] = useState(currentPage);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
 
-    // Reset when sort changes (Next.js will trigger full page reload)
-    // This component handles "Load More" button only
+    // Reset products when filters change (matches ProductGridClient pattern)
+    useEffect(() => {
+        setProducts(initialProducts);
+        setPage(currentPage);
+        setHasMore(initialHasMore);
+        setError(null);
+    }, [initialProducts, filters, currentPage, initialHasMore]);
 
     const handleLoadMore = () => {
         const nextPage = page + 1;
@@ -41,11 +49,27 @@ export function CollectionProductGrid({
         startTransition(async () => {
             try {
                 setError(null);
-                const data = await getCollectionProducts(
+
+                // Parse current filters from URL
+                const sp: Record<string, string | string[] | undefined> = {};
+                searchParams.forEach((value, key) => {
+                    const existing = sp[key];
+                    if (existing === undefined) {
+                        sp[key] = value;
+                    } else if (Array.isArray(existing)) {
+                        existing.push(value);
+                    } else {
+                        sp[key] = [existing, value];
+                    }
+                });
+
+                const filters = parseFilterParams(sp);
+                filters.page = nextPage;
+                filters.sort = currentSort;
+
+                const data = await getCollectionProductsWithFilters(
                     collectionSlug,
-                    nextPage,
-                    24,
-                    currentSort
+                    filters
                 );
 
                 if (data && data.products.length > 0) {
