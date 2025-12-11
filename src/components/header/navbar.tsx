@@ -44,10 +44,10 @@ export default function Navbar({ children, collections = [] }: NavbarProps) {
                 aria-label="Primary navigation"
             >
                 {/* Logo - STATIC, renders immediately */}
-                <Link href="/" aria-label="Nike Home" className="flex items-center flex-shrink-0">
+                <Link href="/" aria-label="Cosmeticspk Home" className="flex items-center flex-shrink-0">
                     <Image
                         src="/logo.svg"
-                        alt="Nike Logo"
+                        alt="Cosmeticspk Logo"
                         width={28}
                         height={28}
                         priority

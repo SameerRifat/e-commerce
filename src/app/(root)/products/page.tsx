@@ -1,4 +1,5 @@
 // src/app/(root)/products/page.tsx
+import type { Metadata } from "next";
 import Filters from "@/components/Filters";
 import Sort from "@/components/Sort";
 import { parseFilterParams } from "@/lib/utils/query";
@@ -8,6 +9,42 @@ import FilterBadges from "@/components/products/filter-badges";
 import { ProductGridClient } from "@/components/products/product-grid-client";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+
+export const metadata: Metadata = {
+  title: "All Products - Browse Premium Cosmetics & Beauty Products",
+  description: "Explore our complete collection of premium cosmetics, skincare, and beauty products. Filter by brand, category, price, and more to find your perfect match.",
+  keywords: [
+    "all products",
+    "cosmetics catalog",
+    "beauty products",
+    "skincare products",
+    "makeup products",
+    "shop cosmetics",
+    "buy beauty products",
+  ],
+  openGraph: {
+    title: "All Products - Cosmeticspk",
+    description: "Explore our complete collection of premium cosmetics, skincare, and beauty products.",
+    url: "/products",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        // url: "/og-products.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Browse All Products at Cosmeticspk",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "All Products - Cosmeticspk",
+    description: "Explore our complete collection of premium cosmetics, skincare, and beauty products.",
+    images: ["/og-image.jpg"],
+    // images: ["/og-products.jpg"],
+  },
+};
 
 export default async function ProductsPage({
   searchParams,

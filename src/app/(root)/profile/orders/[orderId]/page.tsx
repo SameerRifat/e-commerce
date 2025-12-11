@@ -182,9 +182,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
 export async function generateMetadata({ params }: OrderDetailPageProps) {
   const { orderId } = await params;
-  
+
   return {
-    title: `Order Details | Cosmetics Store`,
+    title: `Order Details`,
     description: `View detailed information about your order #${orderId.substring(0, 8).toUpperCase()}`,
+    robots: {
+      index: false,
+      follow: false,
+    },
   };
 }

@@ -1,5 +1,6 @@
 // src/app/(root)/page.tsx
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { HeroSectionData } from "./_components/hero-section-data";
 import { CategoriesSectionData } from "./_components/categories-section-data";
 import { FeaturedCollectionsSectionData } from "./_components/featured-collections-section-data";
@@ -13,10 +14,59 @@ import { SectionErrorBoundary } from "./error-boundaries/section-error-boundary"
 import { VideoCarouselSectionData } from "./_components/video-carousel-section-data";
 import VideoCarouselSkeleton from "@/components/loading/video-carousel-skeleton";
 import FeaturedCollectionsSkeleton from "@/components/loading/collections-skeleton";
+import { generateOrganizationSchema, generateWebSiteSchema } from "@/lib/utils/json-ld";
+
+export const metadata: Metadata = {
+  title: "Premium Cosmetics & Beauty Products - Discover Your Natural Glow",
+  description: "Shop premium cosmetics, skincare, and beauty products. Discover our curated collections of makeup, skincare, and beauty essentials. Free shipping on orders over Rs. 3000.",
+  keywords: [
+    "cosmetics online",
+    "beauty products pakistan",
+    "skincare",
+    "makeup",
+    "beauty store online",
+    "premium cosmetics",
+    "buy cosmetics online",
+  ],
+  openGraph: {
+    title: "Cosmeticspk - Premium Cosmetics & Beauty Products",
+    description: "Discover Your Natural Glow. Shop premium skincare, makeup, and beauty products from top brands.",
+    url: "/",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Cosmeticspk Homepage",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cosmeticspk - Premium Cosmetics & Beauty Products",
+    description: "Discover Your Natural Glow. Shop premium skincare, makeup, and beauty products from top brands.",
+    images: ["/og-image.jpg"],
+  },
+};
 
 export default function Home() {
+  // Generate JSON-LD structured data for homepage
+  const organizationSchema = generateOrganizationSchema();
+  const websiteSchema = generateWebSiteSchema();
+
   return (
     <>
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+
       {/* Hero Section - Independent loading with error boundary */}
       <HeroErrorBoundary>
         <Suspense fallback={<HeroSkeleton />}>

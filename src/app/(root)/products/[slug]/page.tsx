@@ -1,5 +1,6 @@
 // src/app/(root)/products/[slug]/page.tsx
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { CollapsibleSection, ProductGallery } from "@/components";
 import SimpleProductAddToCart from "@/components/products/product-detail/simple-product-add-to-cart";
 import ConfigurableProductAddToCart from "@/components/products/product-detail/configurable-product-add-to-cart";
@@ -13,11 +14,89 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { generateProductSchema, generateBreadcrumbSchema } from "@/lib/utils/json-ld";
 
 type Props = {
     params: Promise<{ slug: string }>;
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
+
+/**
+ * Generate dynamic metadata for product pages
+ * Includes Open Graph, Twitter Cards, and SEO optimization
+ */
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { slug } = await params;
+    const data = await getProductBySlug(slug);
+
+    if (!data) {
+        return {
+            title: "Product Not Found",
+            description: "The product you're looking for could not be found.",
+        };
+    }
+
+    const { product, variants, images } = data;
+
+    // Get primary image
+    const primaryImage = images.find(img => img.isPrimary)?.url || images[0]?.url;
+
+    // Generate description from first 160 chars of description
+    const description = product.description
+        ? product.description.substring(0, 160) + "..."
+        : `Shop ${product.name} at Cosmeticspk. Premium cosmetics and beauty products.`;
+
+    // Calculate price for display
+    let price: number | undefined;
+    if (product.productType === 'simple') {
+        const salePrice = product.salePrice ? Number(product.salePrice) : undefined;
+        const regularPrice = product.price ? Number(product.price) : undefined;
+        price = salePrice || regularPrice;
+    } else {
+        const defaultVariant = variants.find(v => v.id === product.defaultVariantId);
+        const firstVariant = variants[0];
+        const variantToUse = defaultVariant || firstVariant;
+        if (variantToUse) {
+            const salePrice = variantToUse.salePrice ? Number(variantToUse.salePrice) : undefined;
+            const regularPrice = variantToUse.price ? Number(variantToUse.price) : undefined;
+            price = salePrice || regularPrice;
+        }
+    }
+
+    const title = `${product.name}${price ? ` - Rs. ${price}` : ''}`;
+
+    return {
+        title,
+        description,
+        keywords: [
+            product.name,
+            product.brand?.name || '',
+            product.category?.name || '',
+            'cosmetics',
+            'beauty products',
+        ].filter(Boolean),
+        openGraph: {
+            title,
+            description,
+            url: `/products/${product.slug}`,
+            type: 'website',
+            images: primaryImage ? [
+                {
+                    url: primaryImage,
+                    width: 800,
+                    height: 800,
+                    alt: product.name,
+                },
+            ] : [],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: primaryImage ? [primaryImage] : [],
+        },
+    };
+}
 
 /**
  * Product Detail Page - Server Component
@@ -105,8 +184,36 @@ export default async function ProductDetailPage({ params, searchParams }: Props)
         ? variants.find(v => v.color?.slug === selectedColorSlug)?.color?.name
         : undefined;
 
+    // Generate JSON-LD structured data
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cosmeticspk.com';
+    const productSchema = generateProductSchema({
+        product,
+        variants,
+        images,
+        baseUrl,
+        // TODO: Add review data when available
+        // averageRating: product.averageRating,
+        // reviewCount: product.reviewCount,
+    });
+
+    const breadcrumbSchema = generateBreadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Products', url: '/products' },
+        ...(product.category ? [{ name: product.category.name, url: `/products?category=${product.category.slug}` }] : []),
+        { name: product.name },
+    ]);
+
     return (
         <main className="custom_container">
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+            />
             {/* Breadcrumb */}
             <ProductBreadcrumb productName={product.name} />
 
@@ -255,7 +362,7 @@ export default async function ProductDetailPage({ params, searchParams }: Props)
                             </CollapsibleSection>
 
                             <CollapsibleSection title="Shipping & Returns" value="shipping">
-                                <p>Free standard shipping and free 30-day returns for Nike Members.</p>
+                                <p>Free standard shipping on orders over Rs. 3000 and easy 30-day returns.</p>
                             </CollapsibleSection>
 
                             <Suspense

@@ -10,6 +10,7 @@ import { parseFilterParams } from "@/lib/utils/query";
 import Filters from "@/components/Filters";
 import FilterBadges from "@/components/products/filter-badges";
 import Sort from "@/components/Sort";
+import { generateCollectionSchema, generateBreadcrumbSchema } from "@/lib/utils/json-ld";
 
 interface CollectionPageProps {
     params: Promise<{ slug: string }>;
@@ -30,17 +31,29 @@ export async function generateMetadata({
 
     // SEO best practices: Complete metadata for search engines and social sharing
     // Industry standard: Shopify, WooCommerce all include Twitter cards
-    const title = collection.metaTitle || collection.name;
-    const description = collection.metaDescription || collection.description || undefined;
+    const title = collection.metaTitle || `${collection.name} Collection`;
+    const description = collection.metaDescription || collection.description || `Browse the ${collection.name} collection of premium cosmetics and beauty products.`;
     const images = collection.imageUrl ? [collection.imageUrl] : undefined;
 
     return {
         title,
         description,
+        keywords: [
+            collection.name,
+            'beauty collection',
+            'cosmetics',
+            'curated products',
+        ],
         openGraph: {
             title,
             description,
-            images: images ? [{ url: images[0] }] : undefined,
+            url: `/collections/${collection.slug}`,
+            images: images ? [{
+                url: images[0],
+                width: 1200,
+                height: 630,
+                alt: collection.name,
+            }] : undefined,
             type: 'website',
         },
         twitter: {
@@ -71,8 +84,35 @@ export default async function CollectionPage({ params, searchParams }: Collectio
     // Fetch filter options for this collection
     const filterOptions = await getCollectionFilterOptions(slug);
 
+    // Generate JSON-LD structured data
+    const collectionSchema = generateCollectionSchema({
+        name: collection.name,
+        description: collection.description || undefined,
+        url: `/collections/${slug}`,
+        products: products.slice(0, 10).map(p => ({
+            name: p.name,
+            url: `/products/${p.slug}`,
+            image: p.imageUrl || undefined,
+        })),
+    });
+
+    const breadcrumbSchema = generateBreadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Collections', url: '/collections' },
+        { name: collection.name },
+    ]);
+
     return (
         <main className="custom_container pb-10">
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+            />
             {/* Hero Section (if image exists) */}
             {/* image dimensions: 2048/768 */}
             {collection.imageUrl && (

@@ -86,6 +86,10 @@ export default async function CartPage() {
 }
 
 export const metadata = {
-  title: "Shopping Cart | Cosmetics Store",
+  title: "Shopping Cart",
   description: "Review your selected cosmetics and beauty products before checkout.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };

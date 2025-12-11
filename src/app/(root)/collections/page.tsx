@@ -1,7 +1,43 @@
 // src/app/(root)/collections/page.tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { getActiveCollections } from "@/lib/actions/collections";
+
+export const metadata: Metadata = {
+    title: "Collections - Curated Beauty & Cosmetics Sets",
+    description: "Discover our curated collections of premium cosmetics and beauty products. Handpicked selections for every occasion and style.",
+    keywords: [
+        "beauty collections",
+        "cosmetics sets",
+        "curated beauty products",
+        "makeup collections",
+        "skincare sets",
+        "beauty bundles",
+    ],
+    openGraph: {
+        title: "Collections - Cosmeticspk",
+        description: "Discover our curated collections of premium cosmetics and beauty products.",
+        url: "/collections",
+        type: "website",
+        images: [
+            {
+                url: "/og-image.jpg",
+                // url: "/og-collections.jpg",
+                width: 1200,
+                height: 630,
+                alt: "Browse Collections at Cosmeticspk",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Collections - Cosmeticspk",
+        description: "Discover our curated collections of premium cosmetics and beauty products.",
+        images: ["/og-image.jpg"],
+        // images: ["/og-collections.jpg"],
+    },
+};
 
 export default async function CollectionsPage() {
     const collections = await getActiveCollections();
