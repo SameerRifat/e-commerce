@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
+import { deleteMediaFile } from "@/lib/actions/media-cleanup";
+import { isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 interface CategoryImageUploadProps {
   imageUrl: string | null;
@@ -62,6 +64,8 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
       if (disabled || acceptedFiles.length === 0) return;
 
       const file = acceptedFiles[0];
+      const oldImageUrl = previewUrl;
+
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -70,7 +74,17 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
       setPreviewUrl(preview);
 
       try {
+        // Upload new image first
         await startUpload([file]);
+
+        // After successful upload, delete old image from UploadThing (if it exists)
+        if (oldImageUrl && isUploadThingUrl(oldImageUrl)) {
+          console.log('[CLEANUP] Deleting replaced image:', oldImageUrl);
+          deleteMediaFile(oldImageUrl).catch(error => {
+            console.error('[CLEANUP] Failed to delete old image:', error);
+            // Don't block the upload on cleanup failure
+          });
+        }
       } catch (error) {
         console.error("Upload failed:", error);
         // Revert preview on error
@@ -79,7 +93,7 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
         setUploadProgress(0);
       }
     },
-    [disabled, imageUrl, startUpload]
+    [disabled, imageUrl, previewUrl, startUpload]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -91,12 +105,32 @@ const CategoryImageUpload: React.FC<CategoryImageUploadProps> = ({
     disabled: disabled || isUploading,
   });
 
-  const removeImage = () => {
+  const removeImage = async () => {
+    const urlToDelete = previewUrl;
+
+    // Revoke blob URL if it exists
     if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl);
     }
+
+    // Update UI immediately for better UX
     setPreviewUrl(null);
     onChange(null);
+
+    // Delete from UploadThing storage if it's an uploaded file
+    if (urlToDelete && isUploadThingUrl(urlToDelete)) {
+      console.log('[CLEANUP] Deleting removed image:', urlToDelete);
+      try {
+        const result = await deleteMediaFile(urlToDelete);
+        if (result.success) {
+          console.log('[CLEANUP] Successfully deleted removed image');
+        } else {
+          console.error('[CLEANUP] Failed to delete removed image:', result.error);
+        }
+      } catch (error) {
+        console.error('[CLEANUP] Error deleting removed image:', error);
+      }
+    }
   };
 
   const hasImage = previewUrl && previewUrl.length > 0;

@@ -11,6 +11,10 @@ import SecuritySettingsSection from '@/components/profile/security-settings-sect
 export const metadata = {
   title: 'My Profile',
   description: 'Manage your account information and settings',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 interface ProfilePageProps {

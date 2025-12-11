@@ -296,7 +296,7 @@ export const AddressForm = ({
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number (Optional)</FormLabel>
+                        <FormLabel>Phone Number *</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="+92 300 1234567"

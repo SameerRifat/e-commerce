@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
+import { deleteMediaFile } from "@/lib/actions/media-cleanup";
+import { isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 interface BrandImageUploadProps {
   logoUrl: string | null;
@@ -58,6 +60,8 @@ const BrandImageUpload: React.FC<BrandImageUploadProps> = ({
       if (disabled || acceptedFiles.length === 0) return;
 
       const file = acceptedFiles[0];
+      const oldLogoUrl = previewUrl;
+
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -66,7 +70,17 @@ const BrandImageUpload: React.FC<BrandImageUploadProps> = ({
       setPreviewUrl(preview);
 
       try {
+        // Upload new logo first
         await startUpload([file]);
+
+        // After successful upload, delete old logo from UploadThing (if it exists)
+        if (oldLogoUrl && isUploadThingUrl(oldLogoUrl)) {
+          console.log('[CLEANUP] Deleting replaced brand logo:', oldLogoUrl);
+          deleteMediaFile(oldLogoUrl).catch(error => {
+            console.error('[CLEANUP] Failed to delete old brand logo:', error);
+            // Don't block the upload on cleanup failure
+          });
+        }
       } catch (error) {
         console.error("Upload failed:", error);
         // Revert preview on error
@@ -75,7 +89,7 @@ const BrandImageUpload: React.FC<BrandImageUploadProps> = ({
         setUploadProgress(0);
       }
     },
-    [disabled, logoUrl, startUpload]
+    [disabled, logoUrl, previewUrl, startUpload]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -87,12 +101,32 @@ const BrandImageUpload: React.FC<BrandImageUploadProps> = ({
     disabled: disabled || isUploading,
   });
 
-  const removeLogo = () => {
+  const removeLogo = async () => {
+    const urlToDelete = previewUrl;
+
+    // Revoke blob URL if it exists
     if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl);
     }
+
+    // Update UI immediately for better UX
     setPreviewUrl(null);
     onChange(null);
+
+    // Delete from UploadThing storage if it's an uploaded file
+    if (urlToDelete && isUploadThingUrl(urlToDelete)) {
+      console.log('[CLEANUP] Deleting removed brand logo:', urlToDelete);
+      try {
+        const result = await deleteMediaFile(urlToDelete);
+        if (result.success) {
+          console.log('[CLEANUP] Successfully deleted removed brand logo');
+        } else {
+          console.error('[CLEANUP] Failed to delete removed brand logo:', result.error);
+        }
+      } catch (error) {
+        console.error('[CLEANUP] Error deleting removed brand logo:', error);
+      }
+    }
   };
 
   const hasLogo = previewUrl && previewUrl.length > 0;

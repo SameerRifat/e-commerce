@@ -64,6 +64,31 @@ export const ourFileRouter = {
       console.log("Hero slide upload complete:", file.ufsUrl);
       return { uploadedBy: metadata.uploadedBy, url: file.ufsUrl };
     }),
+
+    // Collection image uploader
+  collectionImageUploader: f({
+    image: { maxFileSize: "8MB", maxFileCount: 2 } // Hero + Thumbnail
+  })
+    .middleware(async () => {
+      return { uploadedBy: "dashboard-admin" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Collection image upload complete:", file.url);
+      return { uploadedBy: metadata.uploadedBy, url: file.url };
+    }),
+
+  // Video carousel uploader
+  videoCarouselUploader: f({
+    video: { maxFileSize: "64MB", maxFileCount: 1 },
+    image: { maxFileSize: "4MB", maxFileCount: 1 }
+  })
+    .middleware(async () => {
+      return { uploadedBy: "dashboard-admin" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Video carousel upload complete:", file.url);
+      return { uploadedBy: metadata.uploadedBy, url: file.url };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

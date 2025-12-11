@@ -25,3 +25,4 @@ export * from './filters/sizes';
 export * from './filters/size-categories';
 
 export * from './hero-slides';
+export * from './video-carousel-items';

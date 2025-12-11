@@ -32,7 +32,7 @@ export const useAddressDialog = () => {
       country: address.country,
       countryCode: address.countryCode,
       countryId: address.countryId,
-      phone: address.phone || '',
+      phone: address.phone, // No longer needs fallback to empty string
       isDefault: address.isDefault,
     });
     setShowDialog(true);

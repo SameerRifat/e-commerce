@@ -25,7 +25,7 @@ import {
     searchCollections,
     getProductById,
     getCollectionById
-} from "@/lib/actions/hero-slides-search";
+} from "@/lib/actions/admin-search";
 import { HeroSlideFormData } from "../hero-slide-form-schema";
 import { SearchableCombobox } from "../searchable-combobox";
 

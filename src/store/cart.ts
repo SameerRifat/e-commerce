@@ -1,4 +1,24 @@
-// src/store/cart.ts 
+/**
+ * Simplified Cart Store - Industry Standard Pattern
+ *
+ * Pattern: Simple loading states (Shopify, WooCommerce, Amazon approach)
+ * - No optimistic UI (server is source of truth)
+ * - Clear loading/error states
+ * - Re-fetch after mutations
+ * - Predictable, reliable behavior
+ *
+ * Why no optimistic UI:
+ * - Cart operations are infrequent (~5-10 per session)
+ * - Users EXPECT brief loading when adding to cart
+ * - Simpler code, fewer bugs
+ * - Matches user mental model
+ *
+ * Industry References:
+ * - Shopify: Simple loading spinners, no optimistic updates
+ * - Amazon: POST + redirect pattern
+ * - WooCommerce: Server-driven cart state
+ */
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
@@ -30,10 +50,6 @@ interface CartItem {
   };
   sku: string;
   inStock: number;
-  // Optimistic update tracking
-  isOptimistic?: boolean;
-  tempId?: string; // For new items before server confirmation
-  pendingOperation?: 'add' | 'update' | 'remove'; // Track pending operations
 }
 
 interface CartState {
@@ -43,12 +59,14 @@ interface CartState {
   isLoading: boolean;
   error: string | null;
 
-  // Request tracking for deduplication
-  pendingRequests: Map<string, Promise<boolean>>;
-
   // Actions
   syncWithServer: (silent?: boolean) => Promise<void>;
-  addItem: (productId: string | null, productVariantId: string | null, isSimpleProduct: boolean, quantity?: number, productDetails?: Partial<CartItem>) => Promise<boolean>;
+  addItem: (
+    productId: string | null,
+    productVariantId: string | null,
+    isSimpleProduct: boolean,
+    quantity?: number
+  ) => Promise<boolean>;
   removeItem: (cartItemId: string) => Promise<boolean>;
   updateQuantity: (cartItemId: string, quantity: number) => Promise<boolean>;
   clearCart: () => Promise<boolean>;
@@ -60,19 +78,18 @@ interface CartState {
   closeCart: () => void;
   clearError: () => void;
 
-  // Utility functions
-  getItemByVariantId: (productVariantId: string) => CartItem | undefined;
+  // Utility
   formatPrice: (price: number) => string;
 }
 
+// Transform server cart item to client format
 function transformCartItem(serverItem: CartItemWithDetails): CartItem {
   if (serverItem.isSimpleProduct && serverItem.product) {
-    // Handle simple product
     const primaryImage = serverItem.product.images.find(img => img.isPrimary) || serverItem.product.images[0];
 
     return {
       id: serverItem.id,
-      productId: serverItem.productId, // This should now be populated
+      productId: serverItem.productId,
       productVariantId: null,
       isSimpleProduct: true,
       quantity: serverItem.quantity,
@@ -83,16 +100,14 @@ function transformCartItem(serverItem: CartItemWithDetails): CartItem {
       image: primaryImage?.url,
       sku: serverItem.product.sku,
       inStock: serverItem.product.inStock,
-      isOptimistic: false,
     };
   } else if (!serverItem.isSimpleProduct && serverItem.variant) {
-    // Handle configurable product variant
     const primaryImage = serverItem.variant.images.find(img => img.isPrimary) || serverItem.variant.images[0];
 
     return {
       id: serverItem.id,
-      productId: serverItem.variant.product.id, // Use the product ID from the variant's product
-      productVariantId: serverItem.productVariantId, // This should be populated
+      productId: serverItem.variant.product.id,
+      productVariantId: serverItem.productVariantId,
       isSimpleProduct: false,
       quantity: serverItem.quantity,
       name: serverItem.variant.product.name,
@@ -109,20 +124,11 @@ function transformCartItem(serverItem: CartItemWithDetails): CartItem {
       } : undefined,
       sku: serverItem.variant.sku,
       inStock: serverItem.variant.inStock,
-      isOptimistic: false,
     };
   } else {
-    // Fallback for invalid data
     console.error('Invalid cart item data:', serverItem);
     throw new Error('Invalid cart item data: missing product or variant information');
   }
-}
-
-function calculateTotal(items: CartItem[]): number {
-  return items.reduce((sum, item) => {
-    const price = item.salePrice || item.price;
-    return sum + (price * item.quantity);
-  }, 0);
 }
 
 export const useCartStore = create<CartState>()(
@@ -133,11 +139,11 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       isLoading: false,
       error: null,
-      pendingRequests: new Map(),
 
+      // Sync cart with server (industry pattern: server is source of truth)
       syncWithServer: async (silent = false) => {
         try {
-          if (!silent) set({ isLoading: true });
+          if (!silent) set({ isLoading: true, error: null });
 
           const { items: serverItems, total } = await getCart();
           const clientItems = serverItems.map(transformCartItem);
@@ -152,364 +158,135 @@ export const useCartStore = create<CartState>()(
           console.error('Failed to sync cart with server:', error);
           set({
             isLoading: false,
-            error: 'Failed to sync cart. Please refresh the page.'
+            error: 'Failed to load cart. Please refresh the page.'
           });
         }
       },
 
-      addItem: async (productId: string | null, productVariantId: string | null, isSimpleProduct: boolean, quantity = 1, productDetails?: Partial<CartItem>) => {
-        const state = get();
+      // Add item to cart (simple pattern: loading → server call → re-fetch)
+      addItem: async (productId, productVariantId, isSimpleProduct, quantity = 1) => {
+        set({ isLoading: true, error: null });
 
-        // Create request key for deduplication
-        const requestKey = `add-${productId || productVariantId}-${isSimpleProduct}`;
-
-        // Check if request is already pending
-        if (state.pendingRequests.has(requestKey)) {
-          return await state.pendingRequests.get(requestKey)!;
-        }
-
-        // Create the request promise
-        const requestPromise = (async () => {
-          // Create optimistic item
-          const tempId = `temp-${Date.now()}`;
-          const optimisticItem: CartItem = {
-            id: tempId,
-            productId,
-            productVariantId,
+        try {
+          const result = await addCartItem({
+            productId: productId || undefined,
+            productVariantId: productVariantId || undefined,
             isSimpleProduct,
-            quantity,
-            name: productDetails?.name || 'Loading...',
-            slug: productDetails?.slug || '',
-            price: productDetails?.price || 0,
-            salePrice: productDetails?.salePrice,
-            image: productDetails?.image,
-            color: productDetails?.color,
-            size: productDetails?.size,
-            sku: productDetails?.sku || '',
-            inStock: productDetails?.inStock || 0,
-            isOptimistic: true,
-            tempId,
-            pendingOperation: 'add',
-          };
-
-          // Check if item already exists
-          const existingItemIndex = state.items.findIndex(
-            item => {
-              if (isSimpleProduct) {
-                return item.productId === productId && item.isSimpleProduct;
-              } else {
-                return item.productVariantId === productVariantId && !item.isSimpleProduct;
-              }
-            }
-          );
-
-          let newItems: CartItem[];
-          if (existingItemIndex >= 0) {
-            // Update existing item quantity optimistically
-            newItems = [...state.items];
-            newItems[existingItemIndex] = {
-              ...newItems[existingItemIndex],
-              quantity: newItems[existingItemIndex].quantity + quantity,
-              isOptimistic: true,
-              pendingOperation: 'add',
-            };
-          } else {
-            // Add new item optimistically
-            newItems = [...state.items, optimisticItem];
-          }
-
-          const newTotal = calculateTotal(newItems);
-
-          // Optimistic update
-          set({
-            items: newItems,
-            total: newTotal,
-            error: null
+            quantity
           });
 
-          try {
-            // Server update - FIXED: Always pass productId, even for configurable products
-            const result = await addCartItem({
-              productId: productId || undefined, // Always include productId when available
-              productVariantId: productVariantId || undefined,
-              isSimpleProduct,
-              quantity
-            });
-
-            if (result.success) {
-              // Update optimistic items to confirmed state
-              set((currentState) => {
-                const updatedItems = currentState.items.map(item => {
-                  if (item.tempId === tempId ||
-                    (item.pendingOperation === 'add' &&
-                      ((isSimpleProduct && item.productId === productId) ||
-                        (!isSimpleProduct && item.productVariantId === productVariantId)))) {
-                    return {
-                      ...item,
-                      isOptimistic: false,
-                      pendingOperation: undefined,
-                    };
-                  }
-                  return item;
-                });
-
-                return {
-                  items: updatedItems,
-                  total: calculateTotal(updatedItems),
-                };
-              });
-              return true;
-            } else {
-              throw new Error(result.error || 'Failed to add item');
-            }
-          } catch (error) {
-            console.error('Failed to add item to cart:', error);
-
-            // Rollback optimistic update
+          if (result.success) {
+            // Re-fetch cart from server (source of truth)
+            await get().syncWithServer(true);
+            set({ isLoading: false });
+            return true;
+          } else {
             set({
-              items: state.items,
-              total: state.total,
-              error: 'Failed to add item to cart. Please try again.'
+              isLoading: false,
+              error: result.error || 'Failed to add item to cart'
             });
             return false;
-          } finally {
-            // Remove from pending requests
-            set((currentState) => {
-              const newPendingRequests = new Map(currentState.pendingRequests);
-              newPendingRequests.delete(requestKey);
-              return { pendingRequests: newPendingRequests };
-            });
           }
-        })();
-
-        // Store the request promise
-        set((currentState) => {
-          const newPendingRequests = new Map(currentState.pendingRequests);
-          newPendingRequests.set(requestKey, requestPromise);
-          return { pendingRequests: newPendingRequests };
-        });
-
-        return await requestPromise;
+        } catch (error) {
+          console.error('Failed to add item to cart:', error);
+          set({
+            isLoading: false,
+            error: 'Failed to add item to cart. Please try again.'
+          });
+          return false;
+        }
       },
 
-      updateQuantity: async (cartItemId: string, quantity: number) => {
+      // Update quantity (simple pattern)
+      updateQuantity: async (cartItemId, quantity) => {
         if (quantity <= 0) {
           return await get().removeItem(cartItemId);
         }
 
-        const state = get();
-        const itemIndex = state.items.findIndex(item => item.id === cartItemId);
+        set({ isLoading: true, error: null });
 
-        if (itemIndex === -1) return false;
+        try {
+          const result = await updateCartItem({ cartItemId, quantity });
 
-        // Create request key for deduplication
-        const requestKey = `update-${cartItemId}`;
-
-        // Check if request is already pending
-        if (state.pendingRequests.has(requestKey)) {
-          return await state.pendingRequests.get(requestKey)!;
-        }
-
-        // Create the request promise
-        const requestPromise = (async () => {
-          // Optimistic update - quantity changes are immediate without progress UI
-          const newItems = [...state.items];
-          const oldQuantity = newItems[itemIndex].quantity;
-          newItems[itemIndex] = {
-            ...newItems[itemIndex],
-            quantity,
-            isOptimistic: false, // Quantity updates are immediate, not optimistic
-            pendingOperation: undefined, // No progress UI for quantity changes
-          };
-
-          const newTotal = calculateTotal(newItems);
-
-          set({
-            items: newItems,
-            total: newTotal,
-            error: null
-          });
-
-          try {
-            const result = await updateCartItem({ cartItemId, quantity });
-
-            if (result.success) {
-              // Quantity updates are already confirmed, no need to update state
-              return true;
-            } else {
-              throw new Error(result.error || 'Failed to update item');
-            }
-          } catch (error) {
-            console.error('Failed to update item quantity:', error);
-
-            // Rollback to previous quantity
-            const rollbackItems = [...state.items];
-            rollbackItems[itemIndex] = {
-              ...rollbackItems[itemIndex],
-              quantity: oldQuantity,
-            };
-
+          if (result.success) {
+            await get().syncWithServer(true);
+            set({ isLoading: false });
+            return true;
+          } else {
             set({
-              items: rollbackItems,
-              total: calculateTotal(rollbackItems),
-              error: 'Failed to update quantity. Please try again.'
+              isLoading: false,
+              error: result.error || 'Failed to update quantity'
             });
             return false;
-          } finally {
-            // Remove from pending requests
-            set((currentState) => {
-              const newPendingRequests = new Map(currentState.pendingRequests);
-              newPendingRequests.delete(requestKey);
-              return { pendingRequests: newPendingRequests };
-            });
           }
-        })();
-
-        // Store the request promise
-        set((currentState) => {
-          const newPendingRequests = new Map(currentState.pendingRequests);
-          newPendingRequests.set(requestKey, requestPromise);
-          return { pendingRequests: newPendingRequests };
-        });
-
-        return await requestPromise;
+        } catch (error) {
+          console.error('Failed to update item quantity:', error);
+          set({
+            isLoading: false,
+            error: 'Failed to update quantity. Please try again.'
+          });
+          return false;
+        }
       },
 
-      removeItem: async (cartItemId: string) => {
-        const state = get();
-        const itemToRemove = state.items.find(item => item.id === cartItemId);
+      // Remove item (simple pattern)
+      removeItem: async (cartItemId) => {
+        set({ isLoading: true, error: null });
 
-        if (!itemToRemove) return false;
+        try {
+          const result = await removeCartItem({ cartItemId });
 
-        // Create request key for deduplication
-        const requestKey = `remove-${cartItemId}`;
-
-        // Check if request is already pending
-        if (state.pendingRequests.has(requestKey)) {
-          return await state.pendingRequests.get(requestKey)!;
-        }
-
-        // Create the request promise
-        const requestPromise = (async () => {
-          // ✅ STEP 1: Mark item as pending removal (don't remove yet)
-          const newItems = state.items.map(item =>
-            item.id === cartItemId
-              ? { ...item, pendingOperation: 'remove' as const, isOptimistic: true }
-              : item
-          );
-
-          set({
-            items: newItems,
-            total: calculateTotal(newItems), // Total stays the same
-            error: null
-          });
-
-          try {
-            const result = await removeCartItem({ cartItemId });
-
-            if (result.success) {
-              // ✅ STEP 2: Actually remove the item after server confirms
-              const finalItems = state.items.filter(item => item.id !== cartItemId);
-              set({
-                items: finalItems,
-                total: calculateTotal(finalItems),
-              });
-              return true;
-            } else {
-              throw new Error(result.error || 'Failed to remove item');
-            }
-          } catch (error) {
-            console.error('Failed to remove item from cart:', error);
-
-            // Rollback - remove pending state
-            const rollbackItems = state.items.map(item =>
-              item.id === cartItemId
-                ? { ...item, pendingOperation: undefined, isOptimistic: false }
-                : item
-            );
-
+          if (result.success) {
+            await get().syncWithServer(true);
+            set({ isLoading: false });
+            return true;
+          } else {
             set({
-              items: rollbackItems,
-              total: calculateTotal(rollbackItems),
-              error: 'Failed to remove item. Please try again.'
+              isLoading: false,
+              error: result.error || 'Failed to remove item'
             });
             return false;
-          } finally {
-            // Remove from pending requests
-            set((currentState) => {
-              const newPendingRequests = new Map(currentState.pendingRequests);
-              newPendingRequests.delete(requestKey);
-              return { pendingRequests: newPendingRequests };
-            });
           }
-        })();
-
-        // Store the request promise
-        set((currentState) => {
-          const newPendingRequests = new Map(currentState.pendingRequests);
-          newPendingRequests.set(requestKey, requestPromise);
-          return { pendingRequests: newPendingRequests };
-        });
-
-        return await requestPromise;
+        } catch (error) {
+          console.error('Failed to remove item from cart:', error);
+          set({
+            isLoading: false,
+            error: 'Failed to remove item. Please try again.'
+          });
+          return false;
+        }
       },
 
+      // Clear cart (simple pattern)
       clearCart: async () => {
-        const state = get();
+        set({ isLoading: true, error: null });
 
-        // Create request key for deduplication
-        const requestKey = 'clear-cart';
+        try {
+          const result = await clearCartAction();
 
-        // Check if request is already pending
-        if (state.pendingRequests.has(requestKey)) {
-          return await state.pendingRequests.get(requestKey)!;
-        }
-
-        // Create the request promise
-        const requestPromise = (async () => {
-          // Optimistic update
-          set({
-            items: [],
-            total: 0,
-            error: null
-          });
-
-          try {
-            const result = await clearCartAction();
-
-            if (result.success) {
-              return true;
-            } else {
-              throw new Error(result.error || 'Failed to clear cart');
-            }
-          } catch (error) {
-            console.error('Failed to clear cart:', error);
-
-            // Rollback
+          if (result.success) {
             set({
-              items: state.items,
-              total: state.total,
-              error: 'Failed to clear cart. Please try again.'
+              items: [],
+              total: 0,
+              isLoading: false,
+              error: null
+            });
+            return true;
+          } else {
+            set({
+              isLoading: false,
+              error: result.error || 'Failed to clear cart'
             });
             return false;
-          } finally {
-            // Remove from pending requests
-            set((currentState) => {
-              const newPendingRequests = new Map(currentState.pendingRequests);
-              newPendingRequests.delete(requestKey);
-              return { pendingRequests: newPendingRequests };
-            });
           }
-        })();
-
-        // Store the request promise
-        set((currentState) => {
-          const newPendingRequests = new Map(currentState.pendingRequests);
-          newPendingRequests.set(requestKey, requestPromise);
-          return { pendingRequests: newPendingRequests };
-        });
-
-        return await requestPromise;
+        } catch (error) {
+          console.error('Failed to clear cart:', error);
+          set({
+            isLoading: false,
+            error: 'Failed to clear cart. Please try again.'
+          });
+          return false;
+        }
       },
 
       // UI actions
@@ -520,22 +297,16 @@ export const useCartStore = create<CartState>()(
       clearError: () => set({ error: null }),
 
       // Utility functions
-      getItemByVariantId: (productVariantId: string) => {
-        return get().items.find(item => item.productVariantId === productVariantId);
-      },
-      getItemByProductId: (productId: string) => {
-        return get().items.find(item => item.productId === productId);
-      },
-
       formatPrice: (price: number) => {
         return `Rs.${price.toLocaleString()}`;
       },
     }),
     {
       name: 'cart-storage',
+      // Industry pattern: Only persist UI state, not cart data
+      // Server is source of truth for cart items
       partialize: (state) => ({
-        items: state.items.filter(item => !item.isOptimistic), // Don't persist optimistic items
-        total: state.total,
+        isOpen: state.isOpen,
       }),
     }
   )

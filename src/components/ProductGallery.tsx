@@ -4,7 +4,6 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ImageOff } from "lucide-react";
-import { useVariantStore } from "@/store/variant";
 import {
   Carousel,
   CarouselContent,
@@ -14,15 +13,28 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 
-type Variant = {
+/**
+ * Product Gallery Component - Industry Standard Pattern
+ *
+ * Pattern: CSS-based responsive design (no JavaScript resize listeners)
+ * - Uses Tailwind responsive utilities (hidden/block with lg: breakpoint)
+ * - Better SSR compatibility
+ * - No performance overhead from resize events
+ * - Simpler, more maintainable code
+ *
+ * Industry Reference:
+ * - Shopify themes: CSS media queries for responsive galleries
+ * - Modern web development: Avoid JavaScript for responsive layout
+ */
+
+type GalleryVariant = {
   color: string;
   images: string[];
 };
 
 export interface ProductGalleryProps {
-  productId: string;
-  variants: Variant[];
-  initialVariantIndex?: number;
+  variants: GalleryVariant[];
+  selectedColorName?: string;
   className?: string;
 }
 
@@ -31,9 +43,8 @@ function isValidSrc(src: string | undefined | null) {
 }
 
 export default function ProductGallery({
-  productId,
   variants,
-  initialVariantIndex = 0,
+  selectedColorName,
   className = "",
 }: ProductGalleryProps) {
   const validVariants = useMemo(
@@ -41,28 +52,21 @@ export default function ProductGallery({
     [variants]
   );
 
-  const variantIndex =
-    useVariantStore(
-      (s) => s.selectedByProduct[productId] ?? Math.min(initialVariantIndex, Math.max(validVariants.length - 1, 0))
-    );
+  // Find variant matching selected color
+  const currentVariant = selectedColorName
+    ? validVariants.find(v => v.color === selectedColorName) || validVariants[0]
+    : validVariants[0];
 
-  const images = validVariants[variantIndex]?.images?.filter(isValidSrc) ?? [];
+  const images = currentVariant?.images?.filter(isValidSrc) ?? [];
   const [activeIndex, setActiveIndex] = useState(0);
   const [mainApi, setMainApi] = useState<CarouselApi>();
   const [thumbApi, setThumbApi] = useState<CarouselApi>();
-  const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    const listener = () => checkMobile();
-    window.addEventListener("resize", listener);
-    return () => window.removeEventListener("resize", listener);
-  }, []);
-
+  // Reset active index when color changes
   useEffect(() => {
     setActiveIndex(0);
-  }, [variantIndex]);
+    mainApi?.scrollTo(0);
+  }, [selectedColorName, mainApi]);
 
   const onThumbClick = useCallback(
     (index: number) => {
@@ -102,8 +106,8 @@ export default function ProductGallery({
 
   return (
     <section className={`flex w-full flex-col lg:flex-row gap-3 lg:gap-4 ${className}`}>
-      {/* Desktop Thumbnail Carousel - Vertical */}
-      {images.length > 1 && !isMobile && (
+      {/* Desktop Thumbnail Carousel - Vertical (CSS responsive: hidden on mobile, shown on desktop) */}
+      {images.length > 1 && (
         <div className="w-24 order-2 lg:order-1 hidden lg:flex flex-col">
           <Carousel
             setApi={setThumbApi}
@@ -143,8 +147,8 @@ export default function ProductGallery({
         </div>
       )}
 
-      {/* Mobile Thumbnail Carousel - Horizontal */}
-      {images.length > 1 && isMobile && (
+      {/* Mobile Thumbnail Carousel - Horizontal (CSS responsive: shown on mobile, hidden on desktop) */}
+      {images.length > 1 && (
         <div className="w-full order-2 lg:order-1 lg:hidden">
           <Carousel
             setApi={setThumbApi}
@@ -218,13 +222,6 @@ export default function ProductGallery({
             )}
           </Carousel>
         </div>
-
-        {/* Image Counter */}
-        {/* {images.length > 1 && (
-          <div className="text-center text-xs text-muted-foreground">
-            {activeIndex + 1} / {images.length}
-          </div>
-        )} */}
       </div>
     </section>
   );

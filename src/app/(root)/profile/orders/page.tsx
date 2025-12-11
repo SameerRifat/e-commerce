@@ -31,6 +31,10 @@ const OrdersPage = async () => {
 export default OrdersPage;
 
 export const metadata = {
-  title: "My Orders | Cosmetics Store",
+  title: "My Orders",
   description: "View and manage your orders",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };

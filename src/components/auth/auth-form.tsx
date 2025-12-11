@@ -123,12 +123,12 @@ export default function AuthForm({ mode, onSubmit }: Props) {
           </Link>
         </p>
         <h1 className="mt-3 text-heading-3 text-dark-900">
-          {mode === "sign-in" ? "Welcome Back!" : "Join Nike Today!"}
+          {mode === "sign-in" ? "Welcome Back!" : "Join Cosmeticspk Today!"}
         </h1>
         <p className="mt-1 text-body text-dark-700">
           {mode === "sign-in"
             ? "Sign in to continue your journey"
-            : "Create your account to start your fitness journey"}
+            : "Create your account to start your beauty journey"}
         </p>
       </div>
 

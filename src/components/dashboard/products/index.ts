@@ -7,7 +7,6 @@ export { default as UnifiedProductForm } from './unified-product-form';
 export { default as ProductBasicInfoStep } from './steps/ProductBasicInfoStep';
 export { default as ProductVariantsStep } from './steps/ProductVariantsStep';
 export { default as ProductImagesStep } from './steps/ProductImagesStep';
-export { default as ProductInventoryStep } from './steps/ProductInventoryStep';
 
 // Shared components
 export { default as VariantCard } from './components/VariantCard';

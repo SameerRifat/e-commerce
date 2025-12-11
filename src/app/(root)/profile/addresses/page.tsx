@@ -46,3 +46,12 @@ const AddressesPage = async () => {
 };
 
 export default AddressesPage;
+
+export const metadata = {
+  title: 'My Addresses',
+  description: 'Manage your shipping addresses',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};

@@ -1,3 +1,4 @@
+// src/components/header/navbar.tsx
 "use client";
 
 import Image from "next/image";
@@ -9,24 +10,32 @@ import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cart";
 import MobileSidebar from "./mobile-sidebar";
 import { PersistentSearch, MobileSearchOverlay } from "./search-input";
-
-const NAV_LINKS = [
-    { label: "Men", href: "/products?gender=men" },
-    { label: "Women", href: "/products?gender=women" },
-    { label: "Kids", href: "/products?gender=unisex" },
-    { label: "Collections", href: "/collections" },
-] as const;
+import { CollectionsDropdown } from "./collections-dropdown";
+import type { CollectionNavItem } from "./featured-collections-nav";
 
 interface NavbarProps {
-    children: ReactNode; // This will be the suspended UserSection
+    children: ReactNode;
+    collections?: CollectionNavItem[];
 }
 
-export default function Navbar({ children }: NavbarProps) {
+export default function Navbar({ children, collections = [] }: NavbarProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const { getItemCount } = useCartStore();
 
     const itemCount = getItemCount();
+
+    // Build navigation links with collections for mobile
+    const navLinks = [
+        { label: "Men", href: "/products?gender=men" },
+        { label: "Women", href: "/products?gender=women" },
+        { label: "Kids", href: "/products?gender=unisex" },
+        {
+            label: "Collections",
+            href: "/collections",
+            children: collections.map((c) => ({ label: c.name, href: c.href })),
+        },
+    ];
 
     return (
         <header className="sticky top-0 z-50 bg-background border-b border-border">
@@ -35,10 +44,10 @@ export default function Navbar({ children }: NavbarProps) {
                 aria-label="Primary navigation"
             >
                 {/* Logo - STATIC, renders immediately */}
-                <Link href="/" aria-label="Nike Home" className="flex items-center flex-shrink-0">
+                <Link href="/" aria-label="Cosmeticspk Home" className="flex items-center flex-shrink-0">
                     <Image
                         src="/logo.svg"
-                        alt="Nike Logo"
+                        alt="Cosmeticspk Logo"
                         width={28}
                         height={28}
                         priority
@@ -46,18 +55,35 @@ export default function Navbar({ children }: NavbarProps) {
                     />
                 </Link>
 
-                {/* Desktop Navigation Links - STATIC, renders immediately */}
+                {/* Desktop Navigation Links */}
                 <ul className="hidden items-center gap-6 lg:gap-8 md:flex flex-shrink-0 ml-4">
-                    {NAV_LINKS.map((link) => (
-                        <li key={link.href}>
-                            <Link
-                                href={link.href}
-                                className="text-sm text-foreground transition-colors hover:text-primary whitespace-nowrap"
-                            >
-                                {link.label}
-                            </Link>
-                        </li>
-                    ))}
+                    <li>
+                        <Link
+                            href="/products?gender=men"
+                            className="text-sm text-foreground transition-colors hover:text-primary whitespace-nowrap"
+                        >
+                            Men
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            href="/products?gender=women"
+                            className="text-sm text-foreground transition-colors hover:text-primary whitespace-nowrap"
+                        >
+                            Women
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            href="/products?gender=unisex"
+                            className="text-sm text-foreground transition-colors hover:text-primary whitespace-nowrap"
+                        >
+                            Kids
+                        </Link>
+                    </li>
+                    <li>
+                        <CollectionsDropdown collections={collections} />
+                    </li>
                 </ul>
 
                 {/* Desktop Search - STATIC, renders immediately */}
@@ -102,9 +128,9 @@ export default function Navbar({ children }: NavbarProps) {
                     {/* ✅ User Section - VISIBLE ON ALL SIZES (suspended component) */}
                     {children}
 
-                    {/* Mobile Menu Trigger - navigation links only */}
+                    {/* Mobile Menu Trigger - navigation links with collections */}
                     <MobileSidebar
-                        navLinks={NAV_LINKS}
+                        navLinks={navLinks}
                         open={mobileMenuOpen}
                         onOpenChange={setMobileMenuOpen}
                         trigger={

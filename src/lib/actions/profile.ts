@@ -7,6 +7,7 @@ import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { deleteUploadThingFile, isUploadThingUrl } from '@/lib/uploadthing-utils';
 
 export interface ActionResponse {
   success: boolean;
@@ -91,7 +92,7 @@ export async function updateUserProfile(
 
 /**
  * Update user profile image
- * Modern approach with better URL validation
+ * Modern approach with better URL validation and old image cleanup
  */
 export async function updateProfileImage(
   userId: string,
@@ -115,6 +116,16 @@ export async function updateProfileImage(
       };
     }
 
+    // Get current user data to check for old image
+    const [currentUser] = await db
+      .select({ image: users.image })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const oldImageUrl = currentUser?.image;
+
+    // Update the profile image in database
     await db
       .update(users)
       .set({
@@ -122,6 +133,17 @@ export async function updateProfileImage(
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
+
+    // Delete old image from UploadThing if it exists and is different from new image
+    if (oldImageUrl && oldImageUrl !== imageUrl && isUploadThingUrl(oldImageUrl)) {
+      try {
+        await deleteUploadThingFile(oldImageUrl);
+        console.log(`[CLEANUP] Deleted old profile image for user ${userId}`);
+      } catch (error) {
+        console.error('[CLEANUP] Failed to delete old profile image:', error);
+        // Don't fail the operation if cleanup fails
+      }
+    }
 
     revalidatePath('/profile');
 
@@ -140,6 +162,7 @@ export async function updateProfileImage(
 
 /**
  * Remove user profile image
+ * Deletes the image from storage before removing from database
  */
 export async function removeProfileImage(userId: string): Promise<ActionResponse> {
   try {
@@ -152,6 +175,16 @@ export async function removeProfileImage(userId: string): Promise<ActionResponse
       };
     }
 
+    // Get current user data to check for old image
+    const [currentUser] = await db
+      .select({ image: users.image })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const oldImageUrl = currentUser?.image;
+
+    // Remove the profile image from database
     await db
       .update(users)
       .set({
@@ -159,6 +192,17 @@ export async function removeProfileImage(userId: string): Promise<ActionResponse
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
+
+    // Delete image from UploadThing if it exists
+    if (oldImageUrl && isUploadThingUrl(oldImageUrl)) {
+      try {
+        await deleteUploadThingFile(oldImageUrl);
+        console.log(`[CLEANUP] Deleted profile image for user ${userId}`);
+      } catch (error) {
+        console.error('[CLEANUP] Failed to delete profile image:', error);
+        // Don't fail the operation if cleanup fails
+      }
+    }
 
     revalidatePath('/profile');
 

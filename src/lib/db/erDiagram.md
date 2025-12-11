@@ -197,7 +197,7 @@ erDiagram
         uuid category_id FK
     }
 
-    %% Collections
+    %% Collections (Enhanced)
     collections ||--o{ product_collections : "contains"
     collections ||--o{ hero_slides : "linked-in"
 
@@ -205,13 +205,28 @@ erDiagram
         uuid id PK
         text name
         text slug UK
+        text description
+        text image_url "Hero image"
+        text thumbnail_url "Grid/card image"
+        boolean is_published
+        boolean is_featured "Show in navbar/homepage"
+        int display_order
+        text collection_type "manual|automated"
+        jsonb automation_rules "Smart collection rules"
+        text meta_title "SEO"
+        text meta_description "SEO"
+        timestamp published_at "Schedule start"
+        timestamp expires_at "Schedule end"
         timestamp created_at
+        timestamp updated_at
     }
 
     product_collections {
         uuid id PK
         uuid product_id FK
         uuid collection_id FK
+        int sort_order "Manual ordering"
+        timestamp added_at
     }
 
     %% Reviews

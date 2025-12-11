@@ -30,7 +30,7 @@ export const addresses = pgTable('addresses', {
   countryCode: text('country_code').notNull().default('PK'),
   countryId: integer('country_id').notNull().default(167),
   postalCode: text('postal_code').notNull(),
-  phone: text('phone'),
+  phone: text('phone').notNull(), 
   isDefault: boolean('is_default').notNull().default(false),
 });
 

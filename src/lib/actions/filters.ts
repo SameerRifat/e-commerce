@@ -1,4 +1,4 @@
-// src/lib/actions/filters.ts (FIXED version)
+// src/lib/actions/filters.ts
 "use server";
 
 import { db } from "@/lib/db";

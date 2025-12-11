@@ -52,7 +52,7 @@ export interface Address {
   country: string;
   countryCode: string;
   countryId: number;
-  phone?: string | null;
+  phone: string; // NOW MANDATORY (no optional/null)
   isDefault: boolean;
 }
 
@@ -79,6 +79,6 @@ export const DEFAULT_FORM_VALUES: Partial<AddressFormValues> = {
   country: PAKISTAN_COUNTRY.name,
   countryCode: PAKISTAN_COUNTRY.iso2,
   countryId: PAKISTAN_COUNTRY.id,
-  phone: '',
+  phone: '', // Will be required in form validation
   isDefault: false
 };

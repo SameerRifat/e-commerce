@@ -122,6 +122,10 @@ export default async function CheckoutPage() {
 }
 
 export const metadata = {
-  title: "Checkout | Cosmetics Store",
+  title: "Checkout",
   description: "Complete your order with secure checkout.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };

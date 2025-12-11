@@ -21,7 +21,7 @@ import {
   type SelectColor,
   type SelectSize,
   type SelectSizeCategory,
-  SelectSizeWithCategory, 
+  SelectSizeWithCategory,
 } from "@/lib/db/schema";
 import {
   completeProductFormSchema,
@@ -30,6 +30,7 @@ import {
 import { eq, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { deleteUploadThingFiles, isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 // Types for server action responses
 export type ActionResult<T = unknown> = {
@@ -330,7 +331,6 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
     }
 
     // Validate image URLs before proceeding (ATOMIC TRANSACTION VALIDATION)
-    console.log("🔍 Server-side validation: Checking image URLs...");
     if (data.images && data.images.length > 0) {
       const invalidImages = data.images.filter(img =>
         !img.url ||
@@ -340,8 +340,9 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
       );
 
       if (invalidImages.length > 0) {
-        console.error(`❌ Server validation failed: ${invalidImages.length} invalid image URLs detected`);
-        console.error("Invalid images:", invalidImages.map(img => ({ id: img.id, url: img.url })));
+        console.error(`Server validation failed: ${invalidImages.length} invalid image URLs detected`, {
+          invalidImages: invalidImages.map(img => ({ id: img.id, url: img.url }))
+        });
         return {
           success: false,
           error: `${invalidImages.length} image(s) have invalid URLs. All images must be properly uploaded before creating the product.`,
@@ -350,11 +351,9 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
           }
         };
       }
-      console.log(`✅ Server validation passed: All ${data.images.length} images have valid URLs`);
     }
 
     // Start atomic database transaction
-    console.log("🔄 Starting atomic database transaction...");
     const result = await db.transaction(async (tx) => {
       // Create the main product
       const productData: InsertProduct = {
@@ -409,8 +408,6 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
             variantIdMapping.set(variant.id, createdVariants[index].id);
           }
         });
-
-        console.log(`✅ Created ${createdVariants.length} variants with ID mapping:`, Object.fromEntries(variantIdMapping));
       }
 
       // Create product images
@@ -431,12 +428,9 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
           if (image.variantId) {
             if (variantIdMapping.has(image.variantId)) {
               realVariantId = variantIdMapping.get(image.variantId)!;
-              console.log(`🔗 Mapped temp variant ID ${image.variantId} to real ID ${realVariantId}`);
             } else if (image.variantId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
               // If it's already a valid UUID, use it as is
               realVariantId = image.variantId;
-            } else {
-              console.log(`⚠️ Temp variant ID ${image.variantId} not found in mapping, setting to null`);
             }
             // If it's a temp ID that doesn't exist in mapping, set to null
           }
@@ -452,15 +446,12 @@ export async function createProduct(data: CompleteProductFormData): Promise<Acti
 
         try {
           await tx.insert(productImages).values(imageInserts);
-          console.log(`Successfully inserted ${imageInserts.length} product images`);
         } catch (imageError) {
           console.error("Failed to insert product images:", imageError);
           throw new Error("Failed to save product images. Transaction aborted.");
         }
       }
 
-      console.log(`🎉 Database transaction completed successfully!`);
-      console.log(`✅ Product created with ID: ${productId}`);
       return { productId };
     });
 
@@ -564,8 +555,6 @@ export async function updateProduct(
                 variantIdMapping.set(variant.id, existingVariant.id);
               }
               updatedVariantIds.add(existingVariant.id);
-
-              console.log(`✅ Updated existing variant: ${existingVariant.sku} (${existingVariant.id})`);
             } else {
               // CREATE: New variant, insert it
               const [newVariant] = await tx
@@ -588,8 +577,6 @@ export async function updateProduct(
                 variantIdMapping.set(variant.id, newVariant.id);
               }
               updatedVariantIds.add(newVariant.id);
-
-              console.log(`✅ Created new variant: ${variant.sku} (${newVariant.id})`);
             }
           }
         }
@@ -604,19 +591,13 @@ export async function updateProduct(
             await tx
               .delete(productVariants)
               .where(eq(productVariants.id, variant.id));
-            console.log(`✅ Deleted orphaned variant: ${variant.sku} (${variant.id})`);
           } catch (deleteError) {
-            // If deletion fails due to foreign key constraint, log warning but continue
+            // If deletion fails due to foreign key constraint, continue (variant is still referenced)
             const error = deleteError as { code?: string };
             if (error.code === '23503') {
-              console.warn(
-                `⚠️  Cannot delete variant ${variant.sku} (${variant.id}) - still referenced by cart items. ` +
-                `Variant will remain in database but is no longer associated with this product's active variants.`
-              );
-              // Note: In production, you might want to:
-              // 1. Mark variant as "inactive" instead of deleting
-              // 2. Return a warning to the user
-              // 3. Implement a cleanup job to remove orphaned variants later
+              // Variant is still referenced by cart items, skip deletion
+              // In production, consider marking variant as inactive instead of deleting
+              continue;
             } else {
               throw deleteError; // Re-throw unexpected errors
             }
@@ -637,10 +618,8 @@ export async function updateProduct(
           } catch (deleteError) {
             const error = deleteError as { code?: string };
             if (error.code === '23503') {
-              console.warn(
-                `⚠️  Cannot delete variant ${variant.sku} - still referenced by cart items. ` +
-                `Manual cleanup may be required.`
-              );
+              // Variant is still referenced by cart items, skip deletion
+              continue;
             } else {
               throw deleteError;
             }
@@ -648,7 +627,13 @@ export async function updateProduct(
         }
       }
 
-      // Handle images - replace all existing images
+      // Handle images - get existing images before deletion for cleanup
+      const existingImages = await tx
+        .select({ url: productImages.url })
+        .from(productImages)
+        .where(eq(productImages.productId, productId));
+
+      // Delete existing images from database
       await tx.delete(productImages).where(eq(productImages.productId, productId));
 
       if (data.images && data.images.length > 0) {
@@ -677,6 +662,22 @@ export async function updateProduct(
         await tx.insert(productImages).values(imageInserts);
       }
 
+      // Clean up removed images from UploadThing (after successful transaction)
+      if (existingImages.length > 0) {
+        const newImageUrls = new Set(data.images?.map(img => img.url) || []);
+        const imagesToDelete = existingImages
+          .map(img => img.url)
+          .filter(url => url && !newImageUrls.has(url) && isUploadThingUrl(url));
+
+        if (imagesToDelete.length > 0) {
+          // Delete in background, don't wait or fail if cleanup fails
+          deleteUploadThingFiles(imagesToDelete).catch(error => {
+            console.error('[CLEANUP] Failed to delete removed product images:', error);
+          });
+          console.log(`[CLEANUP] Scheduled deletion of ${imagesToDelete.length} removed product images`);
+        }
+      }
+
       return { productId };
     });
 
@@ -701,6 +702,12 @@ export async function updateProduct(
 // Delete product function
 export async function deleteProduct(productId: string): Promise<ActionResult> {
   try {
+    // Get all product images before deletion for cleanup
+    const imagesToCleanup = await db
+      .select({ url: productImages.url })
+      .from(productImages)
+      .where(eq(productImages.productId, productId));
+
     await db.transaction(async (tx) => {
       // Delete related images (cascade will handle this, but being explicit)
       await tx.delete(productImages).where(eq(productImages.productId, productId));
@@ -711,6 +718,21 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
       // Delete the product
       await tx.delete(products).where(eq(products.id, productId));
     });
+
+    // Clean up images from UploadThing after successful deletion
+    if (imagesToCleanup.length > 0) {
+      const imageUrls = imagesToCleanup
+        .map(img => img.url)
+        .filter(url => url && isUploadThingUrl(url));
+
+      if (imageUrls.length > 0) {
+        // Delete in background, don't wait or fail if cleanup fails
+        deleteUploadThingFiles(imageUrls).catch(error => {
+          console.error('[CLEANUP] Failed to delete product images:', error);
+        });
+        console.log(`[CLEANUP] Scheduled deletion of ${imageUrls.length} product images`);
+      }
+    }
 
     // Revalidate relevant paths
     revalidatePath('/dashboard/products');

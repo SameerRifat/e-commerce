@@ -2,6 +2,8 @@
 import { useState, RefObject } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { MediaUploadState, HeroSlideFormData } from "../hero-slide-form-schema";
+import { deleteMediaFile } from "@/lib/actions/media-cleanup";
+import { isUploadThingUrl } from "@/lib/uploadthing-utils";
 
 interface UseMediaUploadProps {
   initialDesktop: { url?: string; type?: "image" | "video" };
@@ -96,24 +98,50 @@ export const useMediaUpload = ({
     return { desktopUrl, mobileUrl };
   };
 
-  const removeMedia = (target: "desktop" | "mobile") => {
+  const removeMedia = async (target: "desktop" | "mobile") => {
     if (target === "desktop") {
+      const urlToDelete = desktopMedia.url;
+
+      // Revoke blob preview if it exists
       if (desktopMedia.preview) {
         URL.revokeObjectURL(desktopMedia.preview);
       }
+
+      // Update UI immediately
       setDesktopMedia({});
       form.setValue("desktopMediaUrl", "");
       if (desktopInputRef.current) {
         desktopInputRef.current.value = "";
       }
+
+      // Delete from UploadThing storage if it's an uploaded file
+      if (urlToDelete && isUploadThingUrl(urlToDelete)) {
+        console.log('[CLEANUP] Deleting removed hero slide desktop media:', urlToDelete);
+        deleteMediaFile(urlToDelete).catch(error => {
+          console.error('[CLEANUP] Failed to delete hero slide desktop media:', error);
+        });
+      }
     } else {
+      const urlToDelete = mobileMedia.url;
+
+      // Revoke blob preview if it exists
       if (mobileMedia.preview) {
         URL.revokeObjectURL(mobileMedia.preview);
       }
+
+      // Update UI immediately
       setMobileMedia({});
       form.setValue("mobileMediaUrl", "");
       if (mobileInputRef.current) {
         mobileInputRef.current.value = "";
+      }
+
+      // Delete from UploadThing storage if it's an uploaded file
+      if (urlToDelete && isUploadThingUrl(urlToDelete)) {
+        console.log('[CLEANUP] Deleting removed hero slide mobile media:', urlToDelete);
+        deleteMediaFile(urlToDelete).catch(error => {
+          console.error('[CLEANUP] Failed to delete hero slide mobile media:', error);
+        });
       }
     }
   };
